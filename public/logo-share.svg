@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="A-share heatmap logo">
+  <rect width="96" height="96" rx="20" fill="#111827"/>
+  <rect x="16" y="16" width="28" height="28" rx="6" fill="#ef4444"/>
+  <rect x="50" y="16" width="30" height="18" rx="5" fill="#22c55e"/>
+  <rect x="50" y="40" width="30" height="40" rx="6" fill="#16a34a"/>
+  <rect x="16" y="50" width="12" height="30" rx="4" fill="#ef4444"/>
+  <rect x="34" y="50" width="10" height="30" rx="4" fill="#64748b"/>
+</svg>
