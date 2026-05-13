@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   description: "单页 A 股市场热力图，支持行业权重、涨跌颜色、缩放、平移、全屏与截图分享。",
   keywords: ["A 股热力图", "A 股大盘云图", "行情地图", "板块热力图", "A-share heatmap"],
   metadataBase: new URL("https://a-share-heatmap.vercel.app"),
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
   openGraph: {
     title: "A 股市场热力图",
     description: "用一张可交互热力图快速观察 A 股板块轮动与个股涨跌。",

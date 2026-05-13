@@ -2,7 +2,7 @@
 
 用一张可交互的市场云图观察 A 股全市场涨跌、板块轮动和权重分布。适合做成独立站点、个人看盘工具，或作为财经数据产品里的市场概览模块。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_GITHUB_USERNAME/a-share-heatmap)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/wenyuanw/a-share-heatmap)
 
 ![A 股市场热力图预览](./public/preview.png)
 
@@ -35,7 +35,7 @@ pnpm dev
 
 ## 一键部署
 
-将项目推送到 GitHub 后，把上方 Vercel 按钮中的 `YOUR_GITHUB_USERNAME` 替换成你的 GitHub 用户名或组织名，即可通过 Vercel 克隆并部署。
+点击上方 Vercel 按钮后，会直接基于 [wenyuanw/a-share-heatmap](https://github.com/wenyuanw/a-share-heatmap) 创建并部署项目。
 
 也可以在 Vercel 控制台导入仓库。项目无需配置环境变量。
 

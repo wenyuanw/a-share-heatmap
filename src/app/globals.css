@@ -46,8 +46,8 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: color-mix(in srgb, var(--foreground) 16%, transparent);
-  --brand: #22c55e;
-  --brand-foreground: #07110b;
+  --brand: #ef4444;
+  --brand-foreground: #ffffff;
 }
 
 .dark {
@@ -69,8 +69,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: color-mix(in srgb, var(--foreground) 22%, transparent);
-  --brand: #22c55e;
-  --brand-foreground: #041108;
+  --brand: #ef4444;
+  --brand-foreground: #ffffff;
 }
 
 @layer base {

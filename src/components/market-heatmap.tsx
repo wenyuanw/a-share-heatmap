@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
@@ -14,9 +15,12 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Info,
   Loader2,
+  Menu,
   Maximize2,
   Minimize2,
+  Palette,
   RotateCcw,
   Settings2,
   Share2,
@@ -28,7 +32,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { type HeatmapMessages, type Locale } from "@/lib/i18n";
+import { getMessages, type HeatmapMessages, type Locale } from "@/lib/i18n";
 import {
   heatmapPeriodKeys,
   type HeatmapPeriodKey,
@@ -116,6 +120,10 @@ type ScreenshotPreview = {
   blob: Blob;
 };
 
+type PriceColorMode = "red-rise" | "green-rise";
+type ThemeColorKey = "green" | "red" | "blue" | "violet";
+type SettingsTab = "appearance" | "help" | "project";
+
 const refreshIntervalMs = 8000;
 const marketOptions: MarketKey[] = ["all", "sse", "szse", "hs300", "zza500", "cyb", "kcb"];
 const periodOptions: HeatmapPeriodKey[] = [...heatmapPeriodKeys];
@@ -123,6 +131,28 @@ const colorLegendSteps = [-4, -3, -2, -1, 0, 1, 2, 3, 4] as const;
 const legendTicks = [-4, -2, 0, 2, 4] as const;
 const minZoom = 1;
 const maxZoom = 3;
+const githubProjectUrl = "https://github.com/wenyuanw/a-share-heatmap";
+
+const themeColors: Record<
+  ThemeColorKey,
+  {
+    swatch: string;
+    foreground: string;
+  }
+> = {
+  green: { swatch: "#22c55e", foreground: "#041108" },
+  red: { swatch: "#ef4444", foreground: "#ffffff" },
+  blue: { swatch: "#38bdf8", foreground: "#031018" },
+  violet: { swatch: "#a78bfa", foreground: "#13091f" },
+};
+
+function GitHubMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
+      <path d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.87 10.95.58.1.79-.25.79-.56l-.02-2.16c-3.2.7-3.88-1.55-3.88-1.55-.52-1.34-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.78 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.3 1.19-3.1-.12-.3-.52-1.5.11-3.13 0 0 .97-.31 3.19 1.18a10.9 10.9 0 0 1 5.8 0c2.21-1.5 3.18-1.18 3.18-1.18.64 1.63.24 2.83.12 3.13.74.8 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.68.41.36.78 1.08.78 2.18l-.01 3.23c0 .31.2.67.8.55A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z" />
+    </svg>
+  );
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -390,7 +420,7 @@ function getCompactPeriodLabel(period: HeatmapPeriodKey, locale: Locale) {
   return "年";
 }
 
-function getHeatColor(changePct: number) {
+function getHeatColor(changePct: number, colorMode: PriceColorMode) {
   const limit = 10;
   const neutral = "rgb(72, 79, 92)";
   const amplitude = clamp(Math.abs(changePct) / limit, 0, 1);
@@ -399,7 +429,10 @@ function getHeatColor(changePct: number) {
     return neutral;
   }
 
-  if (changePct > 0) {
+  const isRise = changePct > 0;
+  const shouldUseRed = colorMode === "red-rise" ? isRise : !isRise;
+
+  if (shouldUseRed) {
     const red = Math.round(140 + amplitude * 115);
     const green = Math.round(72 - amplitude * 42);
     const blue = Math.round(76 - amplitude * 38);
@@ -412,21 +445,26 @@ function getHeatColor(changePct: number) {
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
-const legendGradient = `linear-gradient(to right, ${colorLegendSteps
-  .map((step, index) => {
-    const position = (index / (colorLegendSteps.length - 1)) * 100;
-    return `${getHeatColor(step)} ${position.toFixed(2)}%`;
-  })
-  .join(", ")})`;
+function getLegendGradient(colorMode: PriceColorMode) {
+  return `linear-gradient(to right, ${colorLegendSteps
+    .map((step, index) => {
+      const position = (index / (colorLegendSteps.length - 1)) * 100;
+      return `${getHeatColor(step, colorMode)} ${position.toFixed(2)}%`;
+    })
+    .join(", ")})`;
+}
 
-function getBoardHeaderColor(changePct: number) {
+function getBoardHeaderColor(changePct: number, colorMode: PriceColorMode) {
   const amplitude = clamp(Math.abs(changePct) / 10, 0, 1);
 
   if (Math.abs(changePct) < 0.1) {
     return "rgb(51, 58, 70)";
   }
 
-  if (changePct > 0) {
+  const isRise = changePct > 0;
+  const shouldUseRed = colorMode === "red-rise" ? isRise : !isRise;
+
+  if (shouldUseRed) {
     return `rgb(${Math.round(120 + amplitude * 60)}, ${Math.round(58 - amplitude * 12)}, ${Math.round(
       66 - amplitude * 10
     )})`;
@@ -435,6 +473,33 @@ function getBoardHeaderColor(changePct: number) {
   return `rgb(${Math.round(46 - amplitude * 10)}, ${Math.round(102 + amplitude * 36)}, ${Math.round(
     70 - amplitude * 6
   )})`;
+}
+
+function getChangeTextClass(changePct: number, colorMode: PriceColorMode, tone: "normal" | "soft" | "strong" = "normal") {
+  if (Math.abs(changePct) < 0.1) {
+    return tone === "strong" ? "text-slate-500" : "text-muted-foreground";
+  }
+
+  const isRise = changePct > 0;
+  const shouldUseRed = colorMode === "red-rise" ? isRise : !isRise;
+
+  if (shouldUseRed) {
+    if (tone === "soft") return "text-red-100";
+    if (tone === "strong") return "text-red-500";
+    return "text-red-400";
+  }
+
+  if (tone === "soft") return "text-emerald-100";
+  if (tone === "strong") return "text-emerald-600";
+  return "text-emerald-400";
+}
+
+function getRiseTextClass(colorMode: PriceColorMode) {
+  return colorMode === "red-rise" ? "text-red-400" : "text-emerald-400";
+}
+
+function getFallTextClass(colorMode: PriceColorMode) {
+  return colorMode === "red-rise" ? "text-emerald-400" : "text-red-400";
 }
 
 function weightedAverageChange(
@@ -939,6 +1004,7 @@ function MobileStockSheet({
   stock,
   stocks,
   messages,
+  priceColorMode,
   onClose,
   onSelectStock,
   onOpenXueqiu,
@@ -947,6 +1013,7 @@ function MobileStockSheet({
   stock: MobileStockSheetStock | null;
   stocks: MobileStockSheetStock[];
   messages: HeatmapMessages;
+  priceColorMode: PriceColorMode;
   onClose: () => void;
   onSelectStock: (code: string) => void;
   onOpenXueqiu: (code: string) => void;
@@ -977,11 +1044,7 @@ function MobileStockSheet({
                   <span
                     className={cn(
                       "text-[15px] font-semibold",
-                      stock.changePct > 0
-                        ? "text-red-300"
-                        : stock.changePct < 0
-                          ? "text-emerald-300"
-                          : "text-slate-200"
+                      getChangeTextClass(stock.changePct, priceColorMode)
                     )}
                   >
                     {formatChange(stock.changePct)}
@@ -1070,11 +1133,7 @@ function MobileStockSheet({
                     <span
                       className={cn(
                         "w-16 shrink-0 text-right text-[12px] font-semibold tabular-nums",
-                        item.changePct > 0
-                          ? "text-red-300"
-                          : item.changePct < 0
-                            ? "text-emerald-300"
-                            : "text-slate-300"
+                        getChangeTextClass(item.changePct, priceColorMode)
                       )}
                     >
                       {formatChange(item.changePct)}
@@ -1192,11 +1251,245 @@ function HeatmapLoadingOverlay({ messages }: { messages: HeatmapMessages }) {
   );
 }
 
-export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: HeatmapMessages }) {
+function SettingsDrawer({
+  open,
+  tab,
+  messages,
+  locale,
+  themeColor,
+  priceColorMode,
+  onClose,
+  onTabChange,
+  onLocaleChange,
+  onThemeColorChange,
+  onPriceColorModeChange,
+}: {
+  open: boolean;
+  tab: SettingsTab;
+  messages: HeatmapMessages;
+  locale: Locale;
+  themeColor: ThemeColorKey;
+  priceColorMode: PriceColorMode;
+  onClose: () => void;
+  onTabChange: (tab: SettingsTab) => void;
+  onLocaleChange: (locale: Locale) => void;
+  onThemeColorChange: (theme: ThemeColorKey) => void;
+  onPriceColorModeChange: (mode: PriceColorMode) => void;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  const isEnglish = locale === "en";
+  const helpItems = [
+    messages.tipArea,
+    messages.tipColor,
+    messages.tipDoubleClick,
+    messages.tipZoom,
+    messages.tipDrag,
+    messages.tipInspectorScroll,
+    messages.tipFullscreen,
+  ];
+  const tabs: Array<{ key: SettingsTab; label: string; icon: typeof Palette }> = [
+    { key: "appearance", label: messages.settingsAppearance, icon: Palette },
+    { key: "help", label: messages.settingsHelp, icon: Info },
+    { key: "project", label: messages.settingsProject, icon: ExternalLink },
+  ];
+  const themeLabels: Record<ThemeColorKey, string> = isEnglish
+    ? { green: "Green", red: "Red", blue: "Blue", violet: "Violet" }
+    : { green: "绿色", red: "红色", blue: "蓝色", violet: "紫色" };
+
+  return (
+    <div className="absolute inset-0 z-[10010] flex items-end justify-center bg-black/62 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <button type="button" className="absolute inset-0" aria-label={messages.closeSheet} onClick={onClose} />
+      <section className="relative flex h-[82dvh] w-full flex-col overflow-hidden rounded-t-lg border border-b-0 border-border bg-card text-card-foreground shadow-[0_-24px_100px_rgba(0,0,0,0.48)]">
+        <div className="flex items-center justify-center pt-2">
+          <span className="h-1 w-10 rounded-full bg-muted-foreground/40" aria-hidden />
+        </div>
+        <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold leading-tight">{messages.settingsTitle}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{messages.settingsDescription}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={messages.closeSheet}
+            className="inline-flex size-9 shrink-0 items-center justify-center border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <div className="grid min-h-0 flex-1 grid-rows-[48px_minmax(0,1fr)] md:grid-cols-[168px_minmax(0,1fr)] md:grid-rows-1">
+          <nav className="flex h-12 min-h-12 gap-1 overflow-x-auto overflow-y-hidden border-b border-border bg-muted/20 px-2 py-1.5 md:h-auto md:min-h-0 md:flex-col md:overflow-x-visible md:border-b-0 md:border-r md:p-2">
+            {tabs.map((item) => {
+              const Icon = item.icon;
+              const active = tab === item.key;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onTabChange(item.key)}
+                  className={cn(
+                    "inline-flex h-9 shrink-0 items-center gap-2 border px-3 text-left text-sm font-medium leading-none transition-colors md:w-full",
+                    active
+                      ? "border-brand/60 bg-brand/15 text-foreground"
+                      : "border-transparent text-muted-foreground hover:border-border hover:bg-background/70 hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className="whitespace-nowrap">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="min-h-0 overflow-y-auto p-4">
+            {tab === "appearance" && (
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-sm font-semibold">{messages.languageLabel}</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => onLocaleChange("zh")}
+                      aria-pressed={locale === "zh"}
+                      className={cn(
+                        "border px-3 py-3 text-left text-sm font-semibold transition-colors",
+                        locale === "zh"
+                          ? "border-brand/70 bg-brand/15 text-foreground"
+                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {messages.languageZh}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onLocaleChange("en")}
+                      aria-pressed={locale === "en"}
+                      className={cn(
+                        "border px-3 py-3 text-left text-sm font-semibold transition-colors",
+                        locale === "en"
+                          ? "border-brand/70 bg-brand/15 text-foreground"
+                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {messages.languageEn}
+                    </button>
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="text-sm font-semibold">{messages.themeColor}</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(Object.keys(themeColors) as ThemeColorKey[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => onThemeColorChange(key)}
+                        aria-pressed={themeColor === key}
+                        className={cn(
+                          "flex items-center gap-2 border px-3 py-2 text-sm font-medium transition-colors",
+                          themeColor === key
+                            ? "border-brand/70 bg-brand/15 text-foreground"
+                            : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <span
+                          className="size-4 shrink-0 border border-white/20"
+                          style={{ backgroundColor: themeColors[key].swatch }}
+                        />
+                        {themeLabels[key]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="text-sm font-semibold">{messages.priceColor}</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => onPriceColorModeChange("red-rise")}
+                      aria-pressed={priceColorMode === "red-rise"}
+                      className={cn(
+                        "border px-3 py-3 text-left text-sm transition-colors",
+                        priceColorMode === "red-rise"
+                          ? "border-brand/70 bg-brand/15"
+                          : "border-border bg-background/70 hover:bg-muted"
+                      )}
+                    >
+                      <span className="font-semibold text-red-400">{messages.redRiseGreenFall}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">+2.4% / -1.8%</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPriceColorModeChange("green-rise")}
+                      aria-pressed={priceColorMode === "green-rise"}
+                      className={cn(
+                        "border px-3 py-3 text-left text-sm transition-colors",
+                        priceColorMode === "green-rise"
+                          ? "border-brand/70 bg-brand/15"
+                          : "border-border bg-background/70 hover:bg-muted"
+                      )}
+                    >
+                      <span className="font-semibold text-emerald-400">{messages.greenRiseRedFall}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">+2.4% / -1.8%</span>
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {tab === "help" && (
+              <section>
+                <h3 className="text-sm font-semibold">{messages.helpTitle}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.helpIntro}</p>
+                <div className="mt-4 space-y-2">
+                  {helpItems.map((item) => (
+                    <div key={item} className="border border-border bg-background/70 px-3 py-2 text-sm text-muted-foreground">
+                      {item.replace(/^·\s*/, "")}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {tab === "project" && (
+              <section>
+                <h3 className="text-sm font-semibold">{messages.githubProject}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.githubProjectDescription}</p>
+                <a
+                  href={githubProjectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 border border-border bg-background/80 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  <ExternalLink className="size-4" />
+                  github.com/wenyuanw/a-share-heatmap
+                </a>
+              </section>
+            )}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messages?: HeatmapMessages }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const inspectorListRef = useRef<HTMLDivElement | null>(null);
 
+  const [locale, setLocale] = useState<Locale>(initialLocale);
+  const messages = useMemo(() => getMessages(locale).heatmap, [locale]);
+  const [themeColor, setThemeColor] = useState<ThemeColorKey>("red");
+  const [priceColorMode, setPriceColorMode] = useState<PriceColorMode>("red-rise");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const [market, setMarket] = useState<MarketKey>("all");
   const [period, setPeriod] = useState<HeatmapPeriodKey>("day");
   const [marketSummaries, setMarketSummaries] = useState<Partial<Record<MarketKey, MarketSummary>>>({});
@@ -1222,6 +1515,17 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
   const [selectedSubBoardName, setSelectedSubBoardName] = useState<string | null>(null);
   const isEnglish = locale === "en";
   const isMobile = useIsMobile();
+  const legendGradient = useMemo(() => getLegendGradient(priceColorMode), [priceColorMode]);
+  const brandStyle = useMemo(
+    () =>
+      ({
+        "--brand": themeColors[themeColor].swatch,
+        "--brand-foreground": themeColors[themeColor].foreground,
+      }) as CSSProperties,
+    [themeColor]
+  );
+  const riseTextClass = getRiseTextClass(priceColorMode);
+  const fallTextClass = getFallTextClass(priceColorMode);
 
   const activeStockCode = isMobile ? selectedStockCode : hoveredStockCode;
   const activeBoardName = isMobile ? selectedBoardName : hoveredBoardName;
@@ -1268,6 +1572,51 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
     pinchWorldX: 0,
     pinchWorldY: 0,
   });
+
+  useEffect(() => {
+    try {
+      const storedLocale = window.localStorage.getItem("heatmap-locale");
+      const storedTheme = window.localStorage.getItem("heatmap-theme-color");
+      const storedPriceColor = window.localStorage.getItem("heatmap-price-color");
+
+      if (storedLocale === "zh" || storedLocale === "en") {
+        setLocale(storedLocale);
+      }
+      if (storedTheme === "green" || storedTheme === "red" || storedTheme === "blue" || storedTheme === "violet") {
+        setThemeColor(storedTheme);
+      }
+      if (storedPriceColor === "red-rise" || storedPriceColor === "green-rise") {
+        setPriceColorMode(storedPriceColor);
+      }
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+    try {
+      window.localStorage.setItem("heatmap-locale", locale);
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [locale]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("heatmap-theme-color", themeColor);
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [themeColor]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("heatmap-price-color", priceColorMode);
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [priceColorMode]);
 
   const refreshSize = useCallback(() => {
     const target = viewportRef.current;
@@ -1968,7 +2317,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
     }
 
     for (const stock of layout.stockRects) {
-      context.fillStyle = getHeatColor(stock.changePct);
+      context.fillStyle = getHeatColor(stock.changePct, priceColorMode);
       context.fillRect(stock.x, stock.y, stock.width, stock.height);
       drawStockLabel(context, stock, view.scale);
     }
@@ -1978,7 +2327,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
         activeSubBoardName === subBoard.name && activeBoardName === subBoard.boardName;
 
       if (subBoard.titleHeight > 0) {
-        context.fillStyle = getBoardHeaderColor(subBoard.changePct);
+        context.fillStyle = getBoardHeaderColor(subBoard.changePct, priceColorMode);
         context.fillRect(subBoard.x, subBoard.y, subBoard.width, subBoard.titleHeight);
       }
 
@@ -2024,7 +2373,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
     for (const board of layout.boardRects) {
       const isActiveBoard = activeBoardName === board.name;
       if (board.titleHeight > 0) {
-        context.fillStyle = getBoardHeaderColor(board.changePct);
+        context.fillStyle = getBoardHeaderColor(board.changePct, priceColorMode);
         context.fillRect(board.x, board.y, board.width, board.titleHeight);
       }
 
@@ -2081,6 +2430,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
     layout.boardRects,
     layout.subBoardRects,
     layout.stockRects,
+    priceColorMode,
     view.scale,
     view.x,
     view.y,
@@ -2785,6 +3135,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
         "relative min-h-0 bg-background",
         isFullscreen ? "fixed inset-0 z-[9999]" : "flex min-h-0 flex-1 flex-col"
       )}
+      style={brandStyle}
     >
       <div
         className={cn(
@@ -2815,18 +3166,21 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
             aria-hidden={!sidebarOpen && isMobile}
           >
             <div className={cn("flex items-center justify-between gap-2 border-b border-border px-2 py-1.5 sm:px-2.5", isEnglish && "py-1")}>
-              <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <img
+                  src="/icon.svg"
+                  alt=""
+                  className="size-7 shrink-0"
+                  decoding="async"
+                />
                 <h2
                   className={cn(
-                    "font-semibold leading-tight tracking-[0.01em]",
-                    isEnglish ? "text-[14px] sm:text-[15px]" : "text-base sm:text-lg"
+                    "min-w-0 truncate whitespace-nowrap font-semibold leading-tight tracking-[0.01em]",
+                    isEnglish ? "text-[12px] sm:text-[13px]" : "text-[13px] sm:text-sm"
                   )}
                 >
                   {messages.title}
                 </h2>
-                <p className={cn("mt-0.5 text-muted-foreground", isEnglish ? "text-[9px]" : "text-[10px]")}>
-                  {messages.lastUpdated}: {lastUpdatedText}
-                </p>
               </div>
               <button
                 type="button"
@@ -2844,6 +3198,14 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                 isEnglish && "px-1.5 py-1 sm:px-1.5"
               )}
             >
+              <div className={cn("mb-1.5 flex items-center justify-between border border-border bg-muted/18 px-1.5 py-1 text-muted-foreground", isEnglish && "mb-1 px-1.5 py-1")}>
+                <span className={cn("font-semibold uppercase tracking-[0.12em]", isEnglish ? "text-[8.5px]" : "text-[9px]")}>
+                  {messages.lastUpdated}
+                </span>
+                <span className={cn("font-semibold tabular-nums text-foreground", isEnglish ? "text-[9px]" : "text-[10px]")}>
+                  {lastUpdatedText}
+                </span>
+              </div>
               <div className={cn("space-y-1", isEnglish && "space-y-0.5")}>
                 {marketOptions.map((option) => {
                   const summary = marketSummaries[option];
@@ -2879,11 +3241,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                         className={cn(
                           "shrink-0 font-semibold tabular-nums",
                           isEnglish ? "text-[10.5px]" : "text-[12px]",
-                          (summary?.changePct ?? 0) > 0
-                            ? "text-red-400"
-                            : (summary?.changePct ?? 0) < 0
-                              ? "text-emerald-400"
-                              : "text-muted-foreground"
+                          getChangeTextClass(summary?.changePct ?? 0, priceColorMode)
                         )}
                       >
                         {summary ? formatCompactChange(summary.changePct) : "--"}
@@ -2942,10 +3300,10 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                 <div className={cn("mt-1.5 border border-border bg-muted/28 p-1.5", isEnglish && "mt-1 p-[5px]")}>
                   <div className={cn("grid grid-cols-3 gap-2", isEnglish && "gap-1.5")}>
                     <div className="flex min-w-0 flex-col items-center text-center">
-                      <p className={cn("tracking-[0.06em] text-red-400", isEnglish ? "text-[10px]" : "text-[11px]")}>
+                      <p className={cn("tracking-[0.06em]", riseTextClass, isEnglish ? "text-[10px]" : "text-[11px]")}>
                         {messages.legendRise}
                       </p>
-                      <p className={cn("mt-1 font-semibold tabular-nums text-red-400", isEnglish ? "text-[13px]" : "text-base")}>
+                      <p className={cn("mt-1 font-semibold tabular-nums", riseTextClass, isEnglish ? "text-[13px]" : "text-base")}>
                         {formatCount(marketOverview.advanceCount, locale)}
                       </p>
                     </div>
@@ -2965,13 +3323,14 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                     <div className="flex min-w-0 flex-col items-center text-center">
                       <p
                         className={cn(
-                          "tracking-[0.06em] text-emerald-400",
+                          "tracking-[0.06em]",
+                          fallTextClass,
                           isEnglish ? "text-[10px]" : "text-[11px]"
                         )}
                       >
                         {messages.legendFall}
                       </p>
-                      <p className={cn("mt-1 font-semibold tabular-nums text-emerald-400", isEnglish ? "text-[13px]" : "text-base")}>
+                      <p className={cn("mt-1 font-semibold tabular-nums", fallTextClass, isEnglish ? "text-[13px]" : "text-base")}>
                         {formatCount(marketOverview.declineCount, locale)}
                       </p>
                     </div>
@@ -3007,9 +3366,9 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                               : messages.turnoverFlatLabel;
                         const turnoverTrendColor =
                           turnoverTrend === "up"
-                            ? "text-red-400"
+                            ? riseTextClass
                             : turnoverTrend === "down"
-                              ? "text-emerald-400"
+                              ? fallTextClass
                               : "text-muted-foreground";
 
                         return (
@@ -3055,28 +3414,6 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                 </div>
               )}
 
-              <div className={cn("mt-1.5 border border-border bg-muted/18 p-1.5", isEnglish && "mt-1 p-[5px]")}>
-                <p
-                  className={cn(
-                    "font-semibold uppercase tracking-[0.12em] text-muted-foreground",
-                    isEnglish ? "text-[10px]" : "text-[11px]"
-                  )}
-                >
-                  {messages.operationTipsTitle}
-                </p>
-                <div
-                  className={cn(
-                    "mt-1.5 space-y-1 text-muted-foreground",
-                    isEnglish ? "text-[10px] leading-[1.4]" : "text-[11px] leading-5"
-                  )}
-                >
-                  <p>{messages.tipArea}</p>
-                  <p>{messages.tipColor}</p>
-                  <p>{isMobile ? messages.tipTap : messages.tipDoubleClick}</p>
-                  <p>{isMobile ? messages.tipPinch : messages.tipZoom}</p>
-                  <p>{messages.tipFullscreen}</p>
-                </div>
-              </div>
             </div>
 
             <div className={cn("grid grid-cols-1 gap-1.5 border-t border-border p-1.5", isEnglish && "gap-1 p-[5px]")}>
@@ -3117,6 +3454,18 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                 <Maximize2 className={cn(isEnglish ? "mr-1.5 size-3.5" : "mr-2 size-4")} />
                 {messages.enterFullscreen}
               </Button>
+              <Button
+                variant="outline"
+                size={isEnglish ? "xs" : "sm"}
+                className={cn(
+                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  isEnglish && "min-w-0 px-2 text-[10.5px]"
+                )}
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings2 className={cn(isEnglish ? "mr-1.5 size-3.5" : "mr-2 size-4")} />
+                {messages.settingsTitle}
+              </Button>
             </div>
           </aside>
         )}
@@ -3149,7 +3498,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                 aria-label={messages.expandSidebar}
                 className="absolute bottom-3 left-3 z-30 inline-flex size-11 items-center justify-center rounded-full border border-slate-500/70 bg-black/50 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-colors hover:bg-black/70 md:hidden"
               >
-                <Settings2 className="size-5" />
+                <Menu className="size-5" />
               </button>
             )}
 
@@ -3205,11 +3554,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                           <p
                             className={cn(
                               "mt-0.5 text-[16px] font-semibold tabular-nums",
-                              activeInspectorStock.changePct > 0
-                                ? "text-red-100"
-                                : activeInspectorStock.changePct < 0
-                                  ? "text-emerald-100"
-                                  : "text-slate-100"
+                              getChangeTextClass(activeInspectorStock.changePct, priceColorMode, "soft")
                             )}
                           >
                             {formatChange(activeInspectorStock.changePct)}
@@ -3277,11 +3622,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                               <span
                                 className={cn(
                                   "text-right text-[11.5px] font-medium tabular-nums",
-                                  stock.changePct > 0
-                                    ? "text-red-500"
-                                    : stock.changePct < 0
-                                      ? "text-emerald-600"
-                                      : "text-slate-500"
+                                  getChangeTextClass(stock.changePct, priceColorMode, "strong")
                                 )}
                               >
                                 {formatChange(stock.changePct)}
@@ -3309,16 +3650,55 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
         {!isFullscreen && (
           <div className="col-span-1 row-start-2 border-t border-border bg-[#151a21] px-3 py-1.5 sm:px-4 md:col-start-2">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <span
-                className="shrink-0 text-[11px] font-semibold tracking-tight text-brand transition-colors hover:text-brand/85 sm:text-[12px]"
-              >
-                A-Share<span className="text-brand/65"> Heatmap</span>
-              </span>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="group relative shrink-0">
+                  <button
+                    type="button"
+                    aria-label={messages.operationTipsTitle}
+                    onClick={() => {
+                      setSettingsTab("help");
+                      setSettingsOpen(true);
+                    }}
+                    className="inline-flex size-7 items-center justify-center bg-transparent text-slate-400 transition-colors hover:bg-white/5 hover:text-brand focus-visible:bg-white/5 focus-visible:text-brand"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                  <div className="pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-64 border border-slate-700/90 bg-[#0f1319]/96 p-2 text-[11px] leading-5 text-slate-300 opacity-0 shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <p>{messages.tipArea.replace(/^·\s*/, "")}</p>
+                    <p>{messages.tipColor.replace(/^·\s*/, "")}</p>
+                    <p>{(isMobile ? messages.tipTap : messages.tipDoubleClick).replace(/^·\s*/, "")}</p>
+                    <p>{(isMobile ? messages.tipPinch : messages.tipZoom).replace(/^·\s*/, "")}</p>
+                    <p>{messages.tipDrag.replace(/^·\s*/, "")}</p>
+                    <p>{messages.tipInspectorScroll.replace(/^·\s*/, "")}</p>
+                    <p>{messages.tipFullscreen.replace(/^·\s*/, "")}</p>
+                  </div>
+                </div>
+
+                <a
+                  href={githubProjectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={messages.githubProject}
+                  title={messages.githubProject}
+                  className="inline-flex size-7 shrink-0 items-center justify-center bg-transparent text-slate-400 transition-colors hover:bg-white/5 hover:text-brand focus-visible:bg-white/5 focus-visible:text-brand"
+                >
+                  <GitHubMark className="size-3.5" />
+                </a>
+
+                <a
+                  href="https://map.wenyuanw.me"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 truncate text-[11px] font-semibold tracking-tight text-brand transition-colors hover:text-brand/85 sm:text-[12px]"
+                >
+                  map<span className="text-brand/65">.wenyuanw.me</span>
+                </a>
+              </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="flex w-36 items-center gap-1.5 sm:w-52 md:w-56">
                   <TrendingDown
-                    className="size-3 shrink-0 text-emerald-400"
+                    className={cn("size-3 shrink-0", fallTextClass)}
                     aria-label={messages.legendFall}
                   />
                   <div className="relative flex-1">
@@ -3336,7 +3716,7 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
                     </div>
                   </div>
                   <TrendingUp
-                    className="size-3 shrink-0 text-red-400"
+                    className={cn("size-3 shrink-0", riseTextClass)}
                     aria-label={messages.legendRise}
                   />
                 </div>
@@ -3366,11 +3746,26 @@ export function MarketHeatmap({ locale, messages }: { locale: Locale; messages: 
           stock={activeInspectorStock}
           stocks={inspectorStocks}
           messages={messages}
+          priceColorMode={priceColorMode}
           onClose={closeMobileSheet}
           onSelectStock={setSelectedStockCode}
           onOpenXueqiu={openXueqiuForStock}
         />
       )}
+
+      <SettingsDrawer
+        open={settingsOpen}
+        tab={settingsTab}
+        messages={messages}
+        locale={locale}
+        themeColor={themeColor}
+        priceColorMode={priceColorMode}
+        onClose={() => setSettingsOpen(false)}
+        onTabChange={setSettingsTab}
+        onLocaleChange={setLocale}
+        onThemeColorChange={setThemeColor}
+        onPriceColorModeChange={setPriceColorMode}
+      />
 
       {sharePreview && (
         <div className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm">

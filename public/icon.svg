@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="A-share heatmap logo">
+  <defs>
+    <linearGradient id="bg" x1="28" x2="228" y1="18" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172033"/>
+      <stop offset="1" stop-color="#090d14"/>
+    </linearGradient>
+    <linearGradient id="rise" x1="64" x2="190" y1="48" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff5a5f"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="fall" x1="52" x2="198" y1="44" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34d399"/>
+      <stop offset="1" stop-color="#15803d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="34" y="34" width="188" height="188" rx="34" fill="#111827" stroke="#263244" stroke-width="4"/>
+    <rect x="50" y="50" width="74" height="74" rx="14" fill="url(#rise)"/>
+    <rect x="132" y="50" width="74" height="38" rx="12" fill="url(#fall)"/>
+    <rect x="132" y="96" width="32" height="64" rx="10" fill="#ef4444"/>
+    <rect x="172" y="96" width="34" height="64" rx="10" fill="#22c55e"/>
+    <rect x="50" y="132" width="34" height="74" rx="10" fill="#22c55e"/>
+    <rect x="92" y="132" width="72" height="34" rx="10" fill="#64748b"/>
+    <rect x="92" y="174" width="114" height="32" rx="10" fill="#dc2626"/>
+  </g>
+
+  <path
+    d="M78 190L128 66L178 190M98 144H158"
+    fill="none"
+    stroke="#f8fafc"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="16"
+  />
+</svg>

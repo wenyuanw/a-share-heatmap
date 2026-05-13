@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 128" role="img" aria-label="A-share heatmap">
+  <defs>
+    <linearGradient id="markBg" x1="12" x2="116" y1="8" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172033"/>
+      <stop offset="1" stop-color="#090d14"/>
+    </linearGradient>
+    <linearGradient id="markRise" x1="28" x2="92" y1="22" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff5a5f"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="markFall" x1="26" x2="104" y1="22" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34d399"/>
+      <stop offset="1" stop-color="#15803d"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#markBg)"/>
+  <rect x="21" y="21" width="86" height="86" rx="18" fill="#111827" stroke="#263244" stroke-width="2"/>
+  <rect x="30" y="30" width="34" height="34" rx="7" fill="url(#markRise)"/>
+  <rect x="69" y="30" width="28" height="18" rx="6" fill="url(#markFall)"/>
+  <rect x="69" y="53" width="13" height="29" rx="4" fill="#ef4444"/>
+  <rect x="87" y="53" width="10" height="29" rx="4" fill="#22c55e"/>
+  <rect x="30" y="69" width="15" height="28" rx="5" fill="#22c55e"/>
+  <rect x="50" y="69" width="32" height="13" rx="4" fill="#64748b"/>
+  <rect x="50" y="87" width="47" height="10" rx="4" fill="#dc2626"/>
+  <path d="M42 94L64 35L86 94M51 72H77" fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+
+  <text x="144" y="57" fill="#f8fafc" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="32" font-weight="800">
+    A 股市场热力图
+  </text>
+  <text x="146" y="88" fill="#94a3b8" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18" font-weight="600">
+    A-Share Heatmap
+  </text>
+</svg>
