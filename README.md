@@ -77,6 +77,14 @@ pnpm typecheck  # TypeScript 类型检查
 - Tailwind CSS
 - Vercel Serverless Functions
 
+## 参考与致谢
+
+在设计交互、配色和信息密度时，参考了下面这些优秀的市场热力图产品：
+
+- [Finviz Map](https://finviz.com/map) — 美股市场热力图的经典之作，矩形树图布局的标杆。
+- [TradingView Stock Heatmap](https://tw.tradingview.com/heatmap/stock) — 多市场可切换的股票热力图，交互体验流畅。
+- [52ETF 市场云图](https://52etf.site/) — 中文圈做得很用心的 A 股大盘云图站点。
+
 ## License
 
 MIT
