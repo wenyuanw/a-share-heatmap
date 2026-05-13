@@ -1,10 +1,26 @@
+<p align="center">
+  <img src="./public/og-image.png" alt="A 股市场热力图" width="640" />
+</p>
+
 # A 股市场热力图
 
-用一张可交互的市场云图观察 A 股全市场涨跌、板块轮动和权重分布。适合做成独立站点、个人看盘工具，或作为财经数据产品里的市场概览模块。
+一个开源的 **A 股大盘云图** 项目，把整个 A 股市场浓缩成一张可交互的 **A 股市场热力图**。色块大小代表个股流通市值权重，颜色深浅代表当日涨跌幅，让你在几秒钟内看清沪深两市的涨跌结构、行业板块轮动和资金流向。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/wenyuanw/a-share-heatmap)
+支持沪深 A 股全图、沪深 300、中证 A500、创业板、科创板等多个市场范围切换，也支持当日、近 5 日、近 20 日、今年以来等多个周期的涨跌区间，适合作为个人盘前盘后复盘工具，或嵌入财经站点、量化研究平台的市场概览模块。
 
-![A 股市场热力图预览](./public/preview.png)
+<p align="center">
+  <a href="https://map.wenyuanw.me">
+    <img src="https://img.shields.io/badge/在线预览-map.wenyuanw.me-1f6feb?style=for-the-badge&logo=vercel&logoColor=white" alt="在线预览" />
+  </a>
+  &nbsp;
+  <a href="https://vercel.com/new/clone?repository-url=https://github.com/wenyuanw/a-share-heatmap">
+    <img src="https://img.shields.io/badge/一键部署-Deploy%20with%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="一键部署到 Vercel" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="./public/preview.png" alt="A 股市场热力图预览" width="820" />
+</p>
 
 ## 功能亮点
 
@@ -19,10 +35,10 @@
 
 ## 适合场景
 
-- 做一个公开的 A 股热力图网站
-- 给个人投资仪表盘增加市场概览页
-- 学习 Canvas 绘制大规模矩形树图
-- 作为财经可视化项目的基础模板
+- 想拥有一个属于自己的 A 股大盘云图站点，盘中随时打开看一眼当下的市场情绪
+- 在个人投资仪表盘里增加一块 A 股市场热力图，把当日涨跌结构和板块轮动一屏呈现
+- 财经媒体、券商研究或量化平台需要嵌入轻量的 A 股板块热力图作为行情概览组件
+- 学习如何用 Canvas 绘制几千只股票规模的矩形树图，并处理缩放、拖拽等交互细节
 
 ## 快速开始
 
