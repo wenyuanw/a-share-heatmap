@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 
 import "./globals.css";
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col">
         {children}
         <Toaster richColors position="top-center" />
+        <Analytics />
       </body>
     </html>
   );

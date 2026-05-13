@@ -2,7 +2,7 @@
   "name": "a-share-heatmap",
   "version": "0.1.0",
   "private": true,
-  "description": "A single-page A-share market heatmap app for Vercel.",
+  "description": "A 股市场热力图：用一张可交互的市场云图观察 A 股全市场涨跌、板块轮动和权重分布。",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",
