@@ -2937,8 +2937,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
           : `大 A 云图｜${getPeriodLabel(messages, period)} ${formatShareTimestamp(updatedAt)}`;
       const shareUrlLight = "rgba(247, 250, 252, 0.98)";
       const shareUrlParts: { text: string; fillStyle: string }[] = [
-        { text: "A-Share", fillStyle: shareUrlLight },
-        { text: " Heatmap", fillStyle: "#22c55e" },
+        { text: "map.wenyuanw", fillStyle: shareUrlLight },
+        { text: ".me", fillStyle: "#22c55e" },
       ];
 
       const headerY = topPadding / 2;
