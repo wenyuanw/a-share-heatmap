@@ -39,6 +39,18 @@ export const metadata: Metadata = {
   },
 };
 
+const themeInitScript = `
+  try {
+    const displayMode = window.localStorage.getItem("heatmap-display-mode");
+    const isDark = displayMode !== "light";
+    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  } catch {
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.colorScheme = "dark";
+  }
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -48,7 +60,11 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       className="min-h-dvh antialiased dark"
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="flex min-h-dvh flex-col">
         {children}
         <Toaster richColors position="top-center" />

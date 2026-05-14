@@ -20,10 +20,12 @@ import {
   Menu,
   Maximize2,
   Minimize2,
+  Moon,
   Palette,
   RotateCcw,
   Settings2,
   Share2,
+  Sun,
   TrendingDown,
   TrendingUp,
   X,
@@ -122,6 +124,7 @@ type ScreenshotPreview = {
 
 type PriceColorMode = "red-rise" | "green-rise";
 type ThemeColorKey = "green" | "red" | "blue" | "violet";
+type DisplayMode = "dark" | "light";
 type SettingsTab = "appearance" | "help" | "project";
 
 const refreshIntervalMs = 8000;
@@ -144,6 +147,44 @@ const themeColors: Record<
   red: { swatch: "#ef4444", foreground: "#ffffff" },
   blue: { swatch: "#38bdf8", foreground: "#031018" },
   violet: { swatch: "#a78bfa", foreground: "#13091f" },
+};
+
+const heatmapCanvasThemes: Record<
+  DisplayMode,
+  {
+    backgroundStart: string;
+    backgroundEnd: string;
+    boardFill: string;
+    subBoardFill: string;
+    subBoardBorder: string;
+    activeSubBoardInner: string;
+    boardBorder: string;
+    highlightOuter: string;
+    highlightInner: string;
+  }
+> = {
+  dark: {
+    backgroundStart: "#171b22",
+    backgroundEnd: "#10141b",
+    boardFill: "#20252d",
+    subBoardFill: "rgba(18, 23, 31, 0.62)",
+    subBoardBorder: "rgba(148, 163, 184, 0.3)",
+    activeSubBoardInner: "rgba(8, 47, 73, 0.92)",
+    boardBorder: "rgba(148, 163, 184, 0.48)",
+    highlightOuter: "rgba(2, 6, 23, 0.92)",
+    highlightInner: "#f8fafc",
+  },
+  light: {
+    backgroundStart: "#f8fafc",
+    backgroundEnd: "#e9eef5",
+    boardFill: "#eef2f7",
+    subBoardFill: "rgba(255, 255, 255, 0.72)",
+    subBoardBorder: "rgba(100, 116, 139, 0.32)",
+    activeSubBoardInner: "rgba(14, 116, 144, 0.42)",
+    boardBorder: "rgba(100, 116, 139, 0.42)",
+    highlightOuter: "rgba(15, 23, 42, 0.82)",
+    highlightInner: "#ffffff",
+  },
 };
 
 function GitHubMark({ className }: { className?: string }) {
@@ -1152,37 +1193,51 @@ function MobileStockSheet({
 const heatmapLoadingBlocks = [
   {
     className: "col-span-4 row-span-3",
-    tone: "bg-emerald-500/[0.22]",
+    darkTone: "bg-emerald-500/[0.22]",
+    lightTone: "bg-emerald-100/85",
     delay: "0ms",
   },
   {
     className: "col-span-2 row-span-2 col-start-5",
-    tone: "bg-red-500/[0.2]",
+    darkTone: "bg-red-500/[0.2]",
+    lightTone: "bg-red-100/85",
     delay: "120ms",
   },
   {
     className: "col-span-2 row-start-3 col-start-5",
-    tone: "bg-slate-500/[0.18]",
+    darkTone: "bg-slate-500/[0.18]",
+    lightTone: "bg-slate-200/85",
     delay: "240ms",
   },
   {
     className: "col-span-2 row-start-4",
-    tone: "bg-red-500/[0.16]",
+    darkTone: "bg-red-500/[0.16]",
+    lightTone: "bg-red-100/75",
     delay: "180ms",
   },
   {
     className: "col-span-2 row-start-4 col-start-3",
-    tone: "bg-emerald-500/[0.18]",
+    darkTone: "bg-emerald-500/[0.18]",
+    lightTone: "bg-emerald-100/80",
     delay: "300ms",
   },
   {
     className: "col-span-2 row-start-4 col-start-5",
-    tone: "bg-amber-500/[0.12]",
+    darkTone: "bg-amber-500/[0.12]",
+    lightTone: "bg-amber-100/80",
     delay: "90ms",
   },
 ] as const;
 
-function HeatmapLoadingOverlay({ messages }: { messages: HeatmapMessages }) {
+function getInitialDisplayMode(): DisplayMode {
+  if (typeof document !== "undefined") {
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  }
+
+  return "dark";
+}
+
+function HeatmapLoadingOverlay({ displayMode, messages }: { displayMode: DisplayMode; messages: HeatmapMessages }) {
   // Deterministic on SSR + first client paint (index 0); randomize after mount to avoid hydration mismatch.
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -1199,13 +1254,17 @@ function HeatmapLoadingOverlay({ messages }: { messages: HeatmapMessages }) {
   }, [messages.loadingTips]);
 
   const loadingTip = messages.loadingTips[tipIndex] ?? "";
+  const isLightMode = displayMode === "light";
 
   return (
     <div
       role="status"
       aria-live="polite"
       aria-busy="true"
-      className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-[#0a0d12]/92 px-4 py-8 text-center backdrop-blur-[10px]"
+      className={cn(
+        "absolute inset-0 z-40 flex flex-col items-center justify-center gap-6 px-4 py-8 text-center backdrop-blur-[10px]",
+        isLightMode ? "bg-slate-50/92" : "bg-[#0a0d12]/92"
+      )}
     >
       <div className="pointer-events-none w-full max-w-[min(92vw,420px)] select-none">
         <div className="mb-4 flex items-center justify-center gap-2 opacity-90">
@@ -1220,14 +1279,22 @@ function HeatmapLoadingOverlay({ messages }: { messages: HeatmapMessages }) {
           <TrendingUp className="size-3.5 shrink-0 text-red-400/90" aria-hidden />
         </div>
 
-        <div className="grid h-[min(34vh,260px)] grid-cols-6 grid-rows-4 gap-1.5 rounded-md border border-white/[0.07] bg-[#10141b]/90 p-2 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+        <div
+          className={cn(
+            "grid h-[min(34vh,260px)] grid-cols-6 grid-rows-4 gap-1.5 rounded-md border p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)]",
+            isLightMode ? "border-slate-200 bg-white/88" : "border-white/[0.07] bg-[#10141b]/90"
+          )}
+        >
           {heatmapLoadingBlocks.map((block, index) => (
             <div
               key={index}
               className={cn(
-                "rounded-[3px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] animate-pulse",
+                "rounded-[3px] animate-pulse",
+                isLightMode
+                  ? "shadow-[inset_0_0_0_1px_rgba(100,116,139,0.1)]"
+                  : "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]",
                 block.className,
-                block.tone
+                isLightMode ? block.lightTone : block.darkTone
               )}
               style={{ animationDelay: block.delay }}
             />
@@ -1236,15 +1303,15 @@ function HeatmapLoadingOverlay({ messages }: { messages: HeatmapMessages }) {
       </div>
 
       <div className="flex max-w-sm flex-col items-center gap-2.5">
-        <div className="flex items-center gap-3 text-slate-100">
+        <div className={cn("flex items-center gap-3", isLightMode ? "text-slate-900" : "text-slate-100")}>
           <Loader2 className="size-5 shrink-0 animate-spin text-brand" aria-hidden />
           <span className="text-[15px] font-semibold tracking-tight sm:text-base">{messages.loading}</span>
         </div>
         <div className="max-w-[min(92vw,26rem)] space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {messages.loadingTipLabel}
           </p>
-          <p className="text-[12px] leading-relaxed text-slate-400 sm:text-[13px]">{loadingTip}</p>
+          <p className="text-[12px] leading-relaxed text-muted-foreground sm:text-[13px]">{loadingTip}</p>
         </div>
       </div>
     </div>
@@ -1256,11 +1323,13 @@ function SettingsDrawer({
   tab,
   messages,
   locale,
+  displayMode,
   themeColor,
   priceColorMode,
   onClose,
   onTabChange,
   onLocaleChange,
+  onDisplayModeChange,
   onThemeColorChange,
   onPriceColorModeChange,
 }: {
@@ -1268,11 +1337,13 @@ function SettingsDrawer({
   tab: SettingsTab;
   messages: HeatmapMessages;
   locale: Locale;
+  displayMode: DisplayMode;
   themeColor: ThemeColorKey;
   priceColorMode: PriceColorMode;
   onClose: () => void;
   onTabChange: (tab: SettingsTab) => void;
   onLocaleChange: (locale: Locale) => void;
+  onDisplayModeChange: (mode: DisplayMode) => void;
   onThemeColorChange: (theme: ThemeColorKey) => void;
   onPriceColorModeChange: (mode: PriceColorMode) => void;
 }) {
@@ -1382,6 +1453,40 @@ function SettingsDrawer({
                 </section>
 
                 <section>
+                  <h3 className="text-sm font-semibold">{messages.displayMode}</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => onDisplayModeChange("light")}
+                      aria-pressed={displayMode === "light"}
+                      className={cn(
+                        "flex items-center gap-2 border px-3 py-3 text-left text-sm font-semibold transition-colors",
+                        displayMode === "light"
+                          ? "border-brand/70 bg-brand/15 text-foreground"
+                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Sun className="size-4 shrink-0" />
+                      {messages.lightMode}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDisplayModeChange("dark")}
+                      aria-pressed={displayMode === "dark"}
+                      className={cn(
+                        "flex items-center gap-2 border px-3 py-3 text-left text-sm font-semibold transition-colors",
+                        displayMode === "dark"
+                          ? "border-brand/70 bg-brand/15 text-foreground"
+                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Moon className="size-4 shrink-0" />
+                      {messages.darkMode}
+                    </button>
+                  </div>
+                </section>
+
+                <section>
                   <h3 className="text-sm font-semibold">{messages.themeColor}</h3>
                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(Object.keys(themeColors) as ThemeColorKey[]).map((key) => (
@@ -1486,6 +1591,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const messages = useMemo(() => getMessages(locale).heatmap, [locale]);
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(getInitialDisplayMode);
   const [themeColor, setThemeColor] = useState<ThemeColorKey>("red");
   const [priceColorMode, setPriceColorMode] = useState<PriceColorMode>("red-rise");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1514,8 +1621,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [selectedBoardName, setSelectedBoardName] = useState<string | null>(null);
   const [selectedSubBoardName, setSelectedSubBoardName] = useState<string | null>(null);
   const isEnglish = locale === "en";
+  const isLightMode = displayMode === "light";
   const isMobile = useIsMobile();
   const legendGradient = useMemo(() => getLegendGradient(priceColorMode), [priceColorMode]);
+  const heatmapCanvasTheme = heatmapCanvasThemes[displayMode];
   const brandStyle = useMemo(
     () =>
       ({
@@ -1576,11 +1685,15 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   useEffect(() => {
     try {
       const storedLocale = window.localStorage.getItem("heatmap-locale");
+      const storedDisplayMode = window.localStorage.getItem("heatmap-display-mode");
       const storedTheme = window.localStorage.getItem("heatmap-theme-color");
       const storedPriceColor = window.localStorage.getItem("heatmap-price-color");
 
       if (storedLocale === "zh" || storedLocale === "en") {
         setLocale(storedLocale);
+      }
+      if (storedDisplayMode === "dark" || storedDisplayMode === "light") {
+        setDisplayMode(storedDisplayMode);
       }
       if (storedTheme === "green" || storedTheme === "red" || storedTheme === "blue" || storedTheme === "violet") {
         setThemeColor(storedTheme);
@@ -1590,33 +1703,60 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       }
     } catch {
       /* Preferences are optional. */
+    } finally {
+      setPreferencesReady(true);
     }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+    if (!preferencesReady) {
+      return;
+    }
     try {
       window.localStorage.setItem("heatmap-locale", locale);
     } catch {
       /* Preferences are optional. */
     }
-  }, [locale]);
+  }, [locale, preferencesReady]);
 
   useEffect(() => {
+    if (!preferencesReady) {
+      return;
+    }
+
+    const isDark = displayMode === "dark";
+    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+
+    try {
+      window.localStorage.setItem("heatmap-display-mode", displayMode);
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [displayMode, preferencesReady]);
+
+  useEffect(() => {
+    if (!preferencesReady) {
+      return;
+    }
     try {
       window.localStorage.setItem("heatmap-theme-color", themeColor);
     } catch {
       /* Preferences are optional. */
     }
-  }, [themeColor]);
+  }, [preferencesReady, themeColor]);
 
   useEffect(() => {
+    if (!preferencesReady) {
+      return;
+    }
     try {
       window.localStorage.setItem("heatmap-price-color", priceColorMode);
     } catch {
       /* Preferences are optional. */
     }
-  }, [priceColorMode]);
+  }, [preferencesReady, priceColorMode]);
 
   const refreshSize = useCallback(() => {
     const target = viewportRef.current;
@@ -2293,8 +2433,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     canvas.style.height = `${canvasSize.height}px`;
 
     const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-    background.addColorStop(0, "#171b22");
-    background.addColorStop(1, "#10141b");
+    background.addColorStop(0, heatmapCanvasTheme.backgroundStart);
+    background.addColorStop(1, heatmapCanvasTheme.backgroundEnd);
 
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -2307,12 +2447,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     context.scale(view.scale, view.scale);
 
     for (const board of layout.boardRects) {
-      context.fillStyle = "#20252d";
+      context.fillStyle = heatmapCanvasTheme.boardFill;
       context.fillRect(board.x, board.y, board.width, board.height);
     }
 
     for (const subBoard of layout.subBoardRects) {
-      context.fillStyle = "rgba(18, 23, 31, 0.62)";
+      context.fillStyle = heatmapCanvasTheme.subBoardFill;
       context.fillRect(subBoard.x, subBoard.y, subBoard.width, subBoard.height);
     }
 
@@ -2331,7 +2471,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         context.fillRect(subBoard.x, subBoard.y, subBoard.width, subBoard.titleHeight);
       }
 
-      context.strokeStyle = isActiveSubBoard ? "#5eead4" : "rgba(148, 163, 184, 0.3)";
+      context.strokeStyle = isActiveSubBoard ? "#5eead4" : heatmapCanvasTheme.subBoardBorder;
       context.lineWidth = isActiveSubBoard ? 2 : 0.9;
       context.strokeRect(
         subBoard.x + 0.5,
@@ -2341,7 +2481,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       );
 
       if (isActiveSubBoard) {
-        context.strokeStyle = "rgba(8, 47, 73, 0.92)";
+        context.strokeStyle = heatmapCanvasTheme.activeSubBoardInner;
         context.lineWidth = 0.8;
         context.strokeRect(
           subBoard.x + 2.2,
@@ -2377,7 +2517,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         context.fillRect(board.x, board.y, board.width, board.titleHeight);
       }
 
-      context.strokeStyle = isActiveBoard ? "#f6d36d" : "rgba(148, 163, 184, 0.48)";
+      context.strokeStyle = isActiveBoard ? "#f6d36d" : heatmapCanvasTheme.boardBorder;
       context.lineWidth = isActiveBoard ? 1.8 : 1;
       context.strokeRect(board.x + 0.5, board.y + 0.5, Math.max(0, board.width - 1), Math.max(0, board.height - 1));
 
@@ -2401,7 +2541,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     }
 
     if (highlightedStock) {
-      context.strokeStyle = "rgba(2, 6, 23, 0.92)";
+      context.strokeStyle = heatmapCanvasTheme.highlightOuter;
       context.lineWidth = 4;
       context.strokeRect(
         highlightedStock.x + 1,
@@ -2410,7 +2550,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         Math.max(0, highlightedStock.height - 2)
       );
 
-      context.strokeStyle = "#f8fafc";
+      context.strokeStyle = heatmapCanvasTheme.highlightInner;
       context.lineWidth = 2;
       context.strokeRect(
         highlightedStock.x + 1,
@@ -2427,6 +2567,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     activeBoardName,
     activeSubBoardName,
     highlightedStock,
+    heatmapCanvasTheme,
     layout.boardRects,
     layout.subBoardRects,
     layout.stockRects,
@@ -2911,8 +3052,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       }
 
       const background = context.createLinearGradient(0, 0, exportCanvas.width, exportCanvas.height);
-      background.addColorStop(0, "#151922");
-      background.addColorStop(1, "#0f1319");
+      background.addColorStop(0, isLightMode ? "#f8fafc" : "#151922");
+      background.addColorStop(1, isLightMode ? "#e9eef5" : "#0f1319");
       context.fillStyle = background;
       context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
       context.drawImage(sourceCanvas, horizontalPadding, topPadding);
@@ -2935,7 +3076,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         baseWidth < 520
           ? `大 A 云图 ${getCompactPeriodLabel(period, "zh")} ${formatShareTimestamp(updatedAt)}`
           : `大 A 云图｜${getPeriodLabel(messages, period)} ${formatShareTimestamp(updatedAt)}`;
-      const shareUrlLight = "rgba(247, 250, 252, 0.98)";
+      const shareUrlLight = isLightMode ? "rgba(15, 23, 42, 0.96)" : "rgba(247, 250, 252, 0.98)";
       const shareUrlParts: { text: string; fillStyle: string }[] = [
         { text: "map.wenyuanw", fillStyle: shareUrlLight },
         { text: ".me", fillStyle: "#22c55e" },
@@ -2946,7 +3087,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       context.save();
       context.textBaseline = "middle";
-      context.shadowColor = "rgba(0, 0, 0, 0.28)";
+      context.shadowColor = isLightMode ? "rgba(255, 255, 255, 0.52)" : "rgba(0, 0, 0, 0.28)";
       context.shadowBlur = Math.max(4, fontPx * 0.5);
       context.font = `600 ${fontPx}px Arial, sans-serif`;
       context.textAlign = "left";
@@ -2961,7 +3102,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       const leftBlockEnd = urlX;
       const minCenterGap = fontPx * 0.85;
       context.textAlign = "right";
-      context.fillStyle = "rgba(247, 250, 252, 0.96)";
+      context.fillStyle = isLightMode ? "rgba(15, 23, 42, 0.92)" : "rgba(247, 250, 252, 0.96)";
       let titleFontPx = fontPx;
       context.font = `600 ${titleFontPx}px Arial, sans-serif`;
       const titleWidth = context.measureText(shareTitle).width;
@@ -2996,7 +3137,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     } finally {
       setSharePending(false);
     }
-  }, [canvasSize.width, market, messages, period, updatedAt]);
+  }, [canvasSize.width, isLightMode, market, messages, period, updatedAt]);
 
   const downloadSharePreview = useCallback(() => {
     if (!sharePreview) {
@@ -3472,13 +3613,17 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
         <div
           className={cn(
-            "relative min-h-0 overflow-hidden bg-[#10141b]",
+            "relative min-h-0 overflow-hidden",
+            isLightMode ? "bg-[#e9eef5]" : "bg-[#10141b]",
             isFullscreen ? "col-start-1 h-full" : "col-start-1 row-start-1 md:col-start-2"
           )}
         >
           <div
             ref={viewportRef}
-            className="relative h-full min-h-0 overflow-hidden bg-[#10141b]"
+            className={cn(
+              "relative h-full min-h-0 overflow-hidden",
+              isLightMode ? "bg-[#e9eef5]" : "bg-[#10141b]"
+            )}
           >
             {isFullscreen && isMobile && (
               <button
@@ -3637,7 +3782,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               </aside>
             )}
 
-            {loading && <HeatmapLoadingOverlay messages={messages} />}
+            {loading && <HeatmapLoadingOverlay displayMode={displayMode} messages={messages} />}
 
             {error && !loading && (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80 text-sm text-destructive backdrop-blur-sm">
@@ -3648,7 +3793,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         </div>
 
         {!isFullscreen && (
-          <div className="col-span-1 row-start-2 border-t border-border bg-[#151a21] px-3 py-1.5 sm:px-4 md:col-start-2">
+          <div
+            className={cn(
+              "col-span-1 row-start-2 border-t border-border px-3 py-1.5 sm:px-4 md:col-start-2",
+              isLightMode ? "bg-card/95" : "bg-[#151a21]"
+            )}
+          >
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="group relative shrink-0">
@@ -3659,11 +3809,23 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                       setSettingsTab("help");
                       setSettingsOpen(true);
                     }}
-                    className="inline-flex size-7 items-center justify-center bg-transparent text-slate-400 transition-colors hover:bg-white/5 hover:text-brand focus-visible:bg-white/5 focus-visible:text-brand"
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      isLightMode
+                        ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
+                        : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
+                    )}
                   >
                     <Info className="size-3.5" />
                   </button>
-                  <div className="pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-64 border border-slate-700/90 bg-[#0f1319]/96 p-2 text-[11px] leading-5 text-slate-300 opacity-0 shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-64 border p-2 text-[11px] leading-5 opacity-0 shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
+                      isLightMode
+                        ? "border-border bg-popover/96 text-popover-foreground"
+                        : "border-slate-700/90 bg-[#0f1319]/96 text-slate-300"
+                    )}
+                  >
                     <p>{messages.tipArea.replace(/^·\s*/, "")}</p>
                     <p>{messages.tipColor.replace(/^·\s*/, "")}</p>
                     <p>{(isMobile ? messages.tipTap : messages.tipDoubleClick).replace(/^·\s*/, "")}</p>
@@ -3680,7 +3842,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                   rel="noopener noreferrer"
                   aria-label={messages.githubProject}
                   title={messages.githubProject}
-                  className="inline-flex size-7 shrink-0 items-center justify-center bg-transparent text-slate-400 transition-colors hover:bg-white/5 hover:text-brand focus-visible:bg-white/5 focus-visible:text-brand"
+                  className={cn(
+                    "inline-flex size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                    isLightMode
+                      ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
+                      : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
+                  )}
                 >
                   <GitHubMark className="size-3.5" />
                 </a>
@@ -3758,11 +3925,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         tab={settingsTab}
         messages={messages}
         locale={locale}
+        displayMode={displayMode}
         themeColor={themeColor}
         priceColorMode={priceColorMode}
         onClose={() => setSettingsOpen(false)}
         onTabChange={setSettingsTab}
         onLocaleChange={setLocale}
+        onDisplayModeChange={setDisplayMode}
         onThemeColorChange={setThemeColor}
         onPriceColorModeChange={setPriceColorMode}
       />
@@ -3784,11 +3953,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto bg-[#0f1319] p-4">
+            <div className={cn("min-h-0 flex-1 overflow-auto p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}>
               <img
                 src={sharePreview.url}
                 alt={messages.sharePreviewTitle}
-                className="mx-auto h-auto max-w-full border border-slate-700/80 bg-[#10141b] shadow-[0_18px_60px_rgba(0,0,0,0.32)]"
+                className={cn(
+                  "mx-auto h-auto max-w-full border shadow-[0_18px_60px_rgba(0,0,0,0.32)]",
+                  isLightMode ? "border-border bg-background" : "border-slate-700/80 bg-[#10141b]"
+                )}
               />
             </div>
 
