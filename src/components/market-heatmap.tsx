@@ -130,10 +130,12 @@ type SettingsTab = "appearance" | "help" | "project";
 const refreshIntervalMs = 8000;
 const marketOptions: MarketKey[] = ["all", "sse", "szse", "hs300", "zza500", "cyb", "kcb"];
 const periodOptions: HeatmapPeriodKey[] = [...heatmapPeriodKeys];
+const allBoardsValue = "__all__";
 const colorLegendSteps = [-4, -3, -2, -1, 0, 1, 2, 3, 4] as const;
 const legendTicks = [-4, -2, 0, 2, 4] as const;
 const minZoom = 1;
 const maxZoom = 3;
+const flatThreshold = 0.1;
 const githubProjectUrl = "https://github.com/wenyuanw/a-share-heatmap";
 
 const themeColors: Record<
@@ -1229,14 +1231,6 @@ const heatmapLoadingBlocks = [
   },
 ] as const;
 
-function getInitialDisplayMode(): DisplayMode {
-  if (typeof document !== "undefined") {
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  }
-
-  return "dark";
-}
-
 function HeatmapLoadingOverlay({ displayMode, messages }: { displayMode: DisplayMode; messages: HeatmapMessages }) {
   // Deterministic on SSR + first client paint (index 0); randomize after mount to avoid hydration mismatch.
   const [tipIndex, setTipIndex] = useState(0);
@@ -1592,13 +1586,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const messages = useMemo(() => getMessages(locale).heatmap, [locale]);
   const [preferencesReady, setPreferencesReady] = useState(false);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>(getInitialDisplayMode);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("dark");
   const [themeColor, setThemeColor] = useState<ThemeColorKey>("red");
   const [priceColorMode, setPriceColorMode] = useState<PriceColorMode>("red-rise");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const [market, setMarket] = useState<MarketKey>("all");
   const [period, setPeriod] = useState<HeatmapPeriodKey>("day");
+  const [boardFilter, setBoardFilter] = useState(allBoardsValue);
   const [marketSummaries, setMarketSummaries] = useState<Partial<Record<MarketKey, MarketSummary>>>({});
   const [treemapData, setTreemapData] = useState<TreemapResponse | null>(null);
   const [quotes, setQuotes] = useState<QuoteMap>({});
@@ -2019,23 +2014,92 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     };
   }, [fetchMarketSummaries, period]);
 
+  useEffect(() => {
+    if (!treemapData || boardFilter === allBoardsValue) {
+      return;
+    }
+
+    if (!treemapData.nodes.some((node) => node.name === boardFilter)) {
+      setBoardFilter(allBoardsValue);
+    }
+  }, [boardFilter, treemapData]);
+
+  useEffect(() => {
+    setHoveredStockCode(null);
+    setHoveredBoardName(null);
+    setHoveredSubBoardName(null);
+    setSelectedStockCode(null);
+    setSelectedBoardName(null);
+    setSelectedSubBoardName(null);
+    setView({ scale: 1, x: 0, y: 0 });
+  }, [boardFilter]);
+
+  const boardFilterOptions = useMemo(() => treemapData?.nodes ?? [], [treemapData]);
+
+  const visibleTreemapData = useMemo<TreemapResponse | null>(() => {
+    if (!treemapData || boardFilter === allBoardsValue) {
+      return treemapData;
+    }
+
+    const selectedBoard = treemapData.nodes.find((node) => node.name === boardFilter);
+    if (!selectedBoard) {
+      return treemapData;
+    }
+
+    let advanceCount = 0;
+    let flatCount = 0;
+    let declineCount = 0;
+    let turnoverAmount = 0;
+
+    for (const stock of selectedBoard.children) {
+      const changePct = quotes[stock.code]?.changePct ?? stock.changePct;
+
+      if (changePct > flatThreshold) {
+        advanceCount += 1;
+      } else if (changePct < -flatThreshold) {
+        declineCount += 1;
+      } else {
+        flatCount += 1;
+      }
+
+      turnoverAmount += stock.turnoverAmount;
+    }
+
+    return {
+      ...treemapData,
+      stockCount: selectedBoard.stockCount,
+      boardCount: 1,
+      summary: {
+        ...treemapData.summary,
+        advanceCount,
+        flatCount,
+        declineCount,
+        turnoverAmount,
+        turnoverPreviousAmount: 0,
+        turnoverDelta: 0,
+        indexChangePct: weightedAverageChange(selectedBoard.children, quotes),
+      },
+      nodes: [selectedBoard],
+    };
+  }, [boardFilter, quotes, treemapData]);
+
   const marketOverview = useMemo<MarketOverview | null>(() => {
-    if (!treemapData) {
+    if (!visibleTreemapData) {
       return null;
     }
 
     return {
-      advanceCount: treemapData.summary.advanceCount,
-      flatCount: treemapData.summary.flatCount,
-      declineCount: treemapData.summary.declineCount,
-      turnoverAmount: treemapData.summary.turnoverAmount,
-      turnoverPreviousAmount: treemapData.summary.turnoverPreviousAmount,
-      turnoverDelta: treemapData.summary.turnoverDelta,
+      advanceCount: visibleTreemapData.summary.advanceCount,
+      flatCount: visibleTreemapData.summary.flatCount,
+      declineCount: visibleTreemapData.summary.declineCount,
+      turnoverAmount: visibleTreemapData.summary.turnoverAmount,
+      turnoverPreviousAmount: visibleTreemapData.summary.turnoverPreviousAmount,
+      turnoverDelta: visibleTreemapData.summary.turnoverDelta,
     };
-  }, [treemapData]);
+  }, [visibleTreemapData]);
 
   const layout = useMemo(() => {
-    if (!treemapData) {
+    if (!visibleTreemapData) {
       return {
         stockRects: [] as StockRect[],
         boardRects: [] as BoardRect[],
@@ -2048,7 +2112,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     const stockRects: StockRect[] = [];
 
     const boardBoxes = binaryTreemap(
-      treemapData.nodes.map((board) => ({ item: board, value: board.value })),
+      visibleTreemapData.nodes.map((board) => ({ item: board, value: board.value })),
       0,
       0,
       canvasSize.width,
@@ -2183,7 +2247,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     }
 
     return { stockRects, boardRects, subBoardRects };
-  }, [canvasSize.height, canvasSize.width, quotes, treemapData]);
+  }, [canvasSize.height, canvasSize.width, quotes, visibleTreemapData]);
 
   useEffect(() => {
     lastStockRectsRef.current = layout.stockRects;
@@ -2220,11 +2284,11 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   }, [activeBoardName, layout.boardRects]);
 
   const activeBoardStocks = useMemo(() => {
-    if (!activeBoardName || !treemapData) {
+    if (!activeBoardName || !visibleTreemapData) {
       return [] as Array<{ code: string; name: string; subBoardName: string; price: number; changePct: number }>;
     }
 
-    const board = treemapData.nodes.find((node) => node.name === activeBoardName);
+    const board = visibleTreemapData.nodes.find((node) => node.name === activeBoardName);
     if (!board) {
       return [];
     }
@@ -2241,7 +2305,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         };
       })
       .sort((left, right) => Math.abs(right.changePct) - Math.abs(left.changePct));
-  }, [activeBoardName, quotes, treemapData]);
+  }, [activeBoardName, quotes, visibleTreemapData]);
 
   const inspectorStocks = useMemo(() => {
     if (activeBoardStocks.length === 0) {
@@ -3390,6 +3454,39 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                     </button>
                   );
                 })}
+              </div>
+
+              <div className={cn("mt-1.5 border border-border bg-muted/18 p-1.5", isEnglish && "mt-1 p-[5px]")}>
+                <label
+                  htmlFor="board-filter"
+                  className={cn(
+                    "block font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+                    isEnglish ? "text-[9px]" : "text-[10px]"
+                  )}
+                >
+                  {messages.boardFilterLabel}
+                </label>
+                <select
+                  id="board-filter"
+                  value={boardFilter}
+                  onChange={(event) => {
+                    setBoardFilter(event.target.value);
+                    if (isMobile) {
+                      setSidebarOpen(false);
+                    }
+                  }}
+                  className={cn(
+                    "mt-1 h-8 w-full min-w-0 border border-border bg-background/85 px-2 font-semibold text-foreground outline-none transition-colors hover:bg-muted focus:border-brand/70",
+                    isEnglish ? "text-[10.5px]" : "text-[12px]"
+                  )}
+                >
+                  <option value={allBoardsValue}>{messages.allBoards}</option>
+                  {boardFilterOptions.map((board) => (
+                    <option key={board.code} value={board.name}>
+                      {board.name} ({board.stockCount})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className={cn("mt-1.5 border border-border bg-muted/18 p-1.5", isEnglish && "mt-1 p-[5px]")}>

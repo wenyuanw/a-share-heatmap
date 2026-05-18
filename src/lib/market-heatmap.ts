@@ -96,6 +96,7 @@ export type HeatmapStockNode = {
   exchange: ExchangeCode;
   price: number;
   changePct: number;
+  turnoverAmount: number;
 };
 
 export type HeatmapBoardNode = {
@@ -945,6 +946,7 @@ function buildNodesFromStocks(
       exchange: stock.exchange,
       price: quote?.price ?? stock.price,
       changePct: getChangeForPeriod(quote?.changes, period, stock.changePct),
+      turnoverAmount: quote?.turnoverAmount ?? getStockTurnoverAmount(stock),
     });
 
     boardMap.set(stock.boardName, current);
