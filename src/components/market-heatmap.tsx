@@ -2286,6 +2286,18 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     return layout.boardRects.find((board) => board.name === activeBoardName) ?? null;
   }, [activeBoardName, layout.boardRects]);
 
+  const activeSubBoardRect = useMemo(() => {
+    if (!activeBoardName || !activeSubBoardName) {
+      return null;
+    }
+
+    return (
+      layout.subBoardRects.find(
+        (sub) => sub.name === activeSubBoardName && sub.boardName === activeBoardName
+      ) ?? null
+    );
+  }, [activeBoardName, activeSubBoardName, layout.subBoardRects]);
+
   const activeBoardStocks = useMemo(() => {
     if (!activeBoardName || !visibleTreemapData) {
       return [] as Array<{ code: string; name: string; subBoardName: string; price: number; changePct: number }>;
@@ -2377,14 +2389,49 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     const preferredWidth = canvasSize.width >= 1360 ? 452 : canvasSize.width >= 1100 ? 432 : 408;
     const popupWidth = Math.min(maxPopupWidth, preferredWidth);
     const popupHeightEstimate = Math.min(620, Math.max(350, Math.floor(canvasSize.height * 0.7)));
-    const boardLeft = activeBoardRect.x * view.scale + view.x;
-    const boardTop = activeBoardRect.y * view.scale + view.y;
-    const boardRight = (activeBoardRect.x + activeBoardRect.width) * view.scale + view.x;
-    const fitsRight = boardRight + gutter + popupWidth <= canvasSize.width - gutter;
-    const desiredLeft = fitsRight ? boardRight + gutter : boardLeft - popupWidth - gutter;
+
+    const toScreenRect = (rect: { x: number; y: number; width: number; height: number }) => {
+      const screenLeft = rect.x * view.scale + view.x;
+      const screenTop = rect.y * view.scale + view.y;
+      const screenRight = (rect.x + rect.width) * view.scale + view.x;
+      return { left: screenLeft, top: screenTop, right: screenRight };
+    };
+
+    const boardScreen = toScreenRect(activeBoardRect);
+    const boardFitsRight = boardScreen.right + gutter + popupWidth <= canvasSize.width - gutter;
+    const boardFitsLeft = boardScreen.left - gutter - popupWidth >= gutter;
+
+    // When the active board fills (or overflows) the visible canvas — common
+    // when viewing a single 一级板块 — neither side of it can host the popup.
+    // Fall back to a tighter anchor (hovered stock, then sub-board) so the
+    // popup appears next to whatever the user is pointing at instead of being
+    // pinned to the left gutter.
+    const anchorRect =
+      !boardFitsRight && !boardFitsLeft
+        ? activeStock ?? activeSubBoardRect ?? activeBoardRect
+        : activeBoardRect;
+    const anchorScreen = toScreenRect(anchorRect);
+
+    const fitsRight = anchorScreen.right + gutter + popupWidth <= canvasSize.width - gutter;
+    const fitsLeft = anchorScreen.left - gutter - popupWidth >= gutter;
+
+    let desiredLeft: number;
+    if (fitsRight) {
+      desiredLeft = anchorScreen.right + gutter;
+    } else if (fitsLeft) {
+      desiredLeft = anchorScreen.left - popupWidth - gutter;
+    } else {
+      // Anchor still doesn't fit either side; pick whichever side has more
+      // empty space so the popup doesn't always cover the same area.
+      const spaceLeft = anchorScreen.left;
+      const spaceRight = canvasSize.width - anchorScreen.right;
+      desiredLeft =
+        spaceRight >= spaceLeft ? canvasSize.width - popupWidth - gutter : gutter;
+    }
+
     const left = clamp(desiredLeft, gutter, Math.max(gutter, canvasSize.width - popupWidth - gutter));
     const top = clamp(
-      boardTop,
+      anchorScreen.top,
       gutter,
       Math.max(gutter, canvasSize.height - popupHeightEstimate - gutter)
     );
@@ -2400,6 +2447,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     canvasSize.height,
     canvasSize.width,
     activeBoardRect,
+    activeStock,
+    activeSubBoardRect,
     inspectorStocks.length,
     isMobile,
     view.scale,
