@@ -3136,9 +3136,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
           state.lastTapX = 0;
           state.lastTapY = 0;
           if (consumed) {
-            if (event.cancelable) {
-              event.preventDefault();
-            }
+            // The canvas already has `touch-action: none`, which suppresses
+            // the browser's default double-tap-zoom, so we don't need to
+            // call preventDefault here (the touchend listener is passive).
             if (event.touches.length === 0) {
               state.mode = "idle";
               state.moved = false;
