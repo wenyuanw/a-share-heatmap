@@ -1660,6 +1660,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     pinchCenterY: number;
     pinchWorldX: number;
     pinchWorldY: number;
+    lastTapTs: number;
+    lastTapX: number;
+    lastTapY: number;
   }>({
     mode: "idle",
     startClientX: 0,
@@ -1676,6 +1679,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     pinchCenterY: 0,
     pinchWorldX: 0,
     pinchWorldY: 0,
+    lastTapTs: 0,
+    lastTapX: 0,
+    lastTapY: 0,
   });
 
   useEffect(() => {
@@ -2938,6 +2944,39 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     [pickBoard, pickStock, pickSubBoard, toWorldPoint]
   );
 
+  const handleCanvasDoubleTap = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        return false;
+      }
+
+      const bounds = canvas.getBoundingClientRect();
+      const world = toWorldPoint(clientX - bounds.left, clientY - bounds.top);
+
+      const boardTitle = pickBoardTitle(world.x, world.y);
+      if (boardTitle) {
+        setBoardFilter((current) =>
+          current === boardTitle.name ? allBoardsValue : boardTitle.name
+        );
+        return true;
+      }
+
+      // On touch devices the title strip is small; fall back to the whole
+      // board so users can double-tap anywhere inside a 一级板块 to toggle.
+      const board = pickBoard(world.x, world.y);
+      if (board) {
+        setBoardFilter((current) =>
+          current === board.name ? allBoardsValue : board.name
+        );
+        return true;
+      }
+
+      return false;
+    },
+    [pickBoard, pickBoardTitle, toWorldPoint]
+  );
+
   const openXueqiuForStock = useCallback((code: string) => {
     window.open(`https://xueqiu.com/S/${toXueqiuSymbol(code)}`, "_blank", "noopener,noreferrer");
   }, []);
@@ -3084,6 +3123,34 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       const state = touchStateRef.current;
 
       if (state.mode === "tap" && !state.moved && Date.now() - state.startTs < 350) {
+        const now = Date.now();
+        const sinceLastTap = now - state.lastTapTs;
+        const tapDistance = Math.hypot(
+          state.startClientX - state.lastTapX,
+          state.startClientY - state.lastTapY
+        );
+
+        if (state.lastTapTs > 0 && sinceLastTap < 320 && tapDistance < 32) {
+          const consumed = handleCanvasDoubleTap(state.startClientX, state.startClientY);
+          state.lastTapTs = 0;
+          state.lastTapX = 0;
+          state.lastTapY = 0;
+          if (consumed) {
+            if (event.cancelable) {
+              event.preventDefault();
+            }
+            if (event.touches.length === 0) {
+              state.mode = "idle";
+              state.moved = false;
+            }
+            return;
+          }
+        } else {
+          state.lastTapTs = now;
+          state.lastTapX = state.startClientX;
+          state.lastTapY = state.startClientY;
+        }
+
         handleCanvasTap(state.startClientX, state.startClientY);
       }
 
@@ -3115,7 +3182,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       canvas.removeEventListener("touchend", onTouchEnd);
       canvas.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [canvasSize.height, canvasSize.width, handleCanvasTap]);
+  }, [canvasSize.height, canvasSize.width, handleCanvasDoubleTap, handleCanvasTap]);
 
   const onDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLCanvasElement>) => {
