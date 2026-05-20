@@ -1610,6 +1610,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
   const [hoveredStockCode, setHoveredStockCode] = useState<string | null>(null);
   const [hoveredBoardName, setHoveredBoardName] = useState<string | null>(null);
+  const [hoveredBoardTitleName, setHoveredBoardTitleName] = useState<string | null>(null);
   const [hoveredSubBoardName, setHoveredSubBoardName] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStockCode, setSelectedStockCode] = useState<string | null>(null);
@@ -1945,6 +1946,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       setError(null);
       setHoveredStockCode(null);
       setHoveredBoardName(null);
+      setHoveredBoardTitleName(null);
       setHoveredSubBoardName(null);
       setSelectedStockCode(null);
       setSelectedBoardName(null);
@@ -2027,6 +2029,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   useEffect(() => {
     setHoveredStockCode(null);
     setHoveredBoardName(null);
+    setHoveredBoardTitleName(null);
     setHoveredSubBoardName(null);
     setSelectedStockCode(null);
     setSelectedBoardName(null);
@@ -2681,6 +2684,23 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     return null;
   }, []);
 
+  const pickBoardTitle = useCallback((worldX: number, worldY: number) => {
+    for (let index = lastBoardRectsRef.current.length - 1; index >= 0; index -= 1) {
+      const board = lastBoardRectsRef.current[index];
+      if (
+        board.titleHeight > 0 &&
+        worldX >= board.x &&
+        worldX <= board.x + board.width &&
+        worldY >= board.y &&
+        worldY <= board.y + board.titleHeight
+      ) {
+        return board;
+      }
+    }
+
+    return null;
+  }, []);
+
   const pickSubBoard = useCallback((worldX: number, worldY: number) => {
     for (let index = lastSubBoardRectsRef.current.length - 1; index >= 0; index -= 1) {
       const subBoard = lastSubBoardRectsRef.current[index];
@@ -2742,6 +2762,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       const world = toWorldPoint(pointerX, pointerY);
       const stock = pickStock(world.x, world.y);
+      const boardTitle = stock ? null : pickBoardTitle(world.x, world.y);
       const subBoard = stock
         ? { name: stock.subBoardName, boardName: stock.boardName }
         : pickSubBoard(world.x, world.y);
@@ -2753,9 +2774,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       setHoveredStockCode(stock?.code ?? null);
       setHoveredBoardName(board?.name ?? null);
+      setHoveredBoardTitleName(boardTitle?.name ?? null);
       setHoveredSubBoardName(subBoard?.name || null);
     },
-    [canvasSize.height, canvasSize.width, isMobile, pickBoard, pickStock, pickSubBoard, toWorldPoint]
+    [canvasSize.height, canvasSize.width, isMobile, pickBoard, pickBoardTitle, pickStock, pickSubBoard, toWorldPoint]
   );
 
   const onMouseDown = useCallback(
@@ -2784,6 +2806,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     if (!isMobile) {
       setHoveredStockCode(null);
       setHoveredBoardName(null);
+      setHoveredBoardTitleName(null);
       setHoveredSubBoardName(null);
     }
   }, [isMobile]);
@@ -3058,6 +3081,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       const bounds = canvas.getBoundingClientRect();
       const world = toWorldPoint(event.clientX - bounds.left, event.clientY - bounds.top);
+      const boardTitle = pickBoardTitle(world.x, world.y);
+      if (boardTitle) {
+        setBoardFilter((current) => (current === boardTitle.name ? allBoardsValue : boardTitle.name));
+        return;
+      }
+
       const stock = pickStock(world.x, world.y);
       if (!stock) {
         return;
@@ -3065,7 +3094,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       window.open(`https://xueqiu.com/S/${toXueqiuSymbol(stock.code)}`, "_blank", "noopener,noreferrer");
     },
-    [isMobile, pickStock, toWorldPoint]
+    [isMobile, pickBoardTitle, pickStock, toWorldPoint]
   );
 
   const toggleFullscreen = useCallback(() => {
@@ -3749,7 +3778,15 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               role="img"
               aria-label={messages.canvasLabel}
               className="h-full w-full touch-none"
-              style={{ cursor: isPanning ? "grabbing" : view.scale > 1 ? "grab" : activeStock && !isMobile ? "pointer" : "default" }}
+              style={{
+                cursor: isPanning
+                  ? "grabbing"
+                  : view.scale > 1
+                    ? "grab"
+                    : (activeStock || hoveredBoardTitleName) && !isMobile
+                      ? "pointer"
+                      : "default",
+              }}
               onMouseDown={onMouseDown}
               onMouseMove={onMouseMove}
               onMouseUp={onMouseUp}
