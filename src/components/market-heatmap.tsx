@@ -7146,7 +7146,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
             {inspectorStyle && (
               <aside
-                className="pointer-events-none absolute z-30 overflow-hidden rounded-none border border-slate-700/80 bg-[#0f1319]/96 text-slate-100 shadow-[0_22px_72px_rgba(0,0,0,0.36)] backdrop-blur-sm"
+                className={cn(
+                  "pointer-events-none absolute z-30 overflow-hidden rounded-none border shadow-[0_22px_72px_rgba(0,0,0,0.36)] backdrop-blur-sm",
+                  isLightMode
+                    ? "border-slate-300/80 bg-white/96 text-slate-900"
+                    : "border-slate-700/80 bg-[#0f1319]/96 text-slate-100"
+                )}
                 style={{
                   left: inspectorStyle.left,
                   top: inspectorStyle.top,
@@ -7202,24 +7207,29 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                       </div>
                     </div>
 
-                    <div className="flex justify-center border-b border-slate-700/80 bg-white px-2 py-1">
+                    <div
+                      className={cn(
+                        "flex justify-center px-3 py-2",
+                        isLightMode ? "border-b border-slate-200 bg-[#f4f6f7]" : "border-b border-white/10 bg-[#0c1015]"
+                      )}
+                    >
                       <img
                         src={getDailyKlineUrl(activeInspectorStock.code)}
                         alt={`${activeInspectorStock.name} K-line`}
-                        className="h-auto w-[88%] bg-white object-contain"
+                        className="h-auto w-[88%] bg-white object-contain shadow-[0_2px_10px_rgba(15,23,42,0.10)] ring-1 ring-black/5"
                         loading="lazy"
                         decoding="async"
                         referrerPolicy="no-referrer"
                       />
                     </div>
 
-                    <div className="bg-[#f4f6f7] text-slate-900">
-                      <div className="space-y-1 border-b border-slate-300/70 px-3 py-1.5">
+                    <div className={cn("text-slate-900", isLightMode ? "bg-[#f4f6f7]" : "bg-[#0c1015] text-slate-200")}>
+                      <div className={cn("space-y-1 border-b px-3 py-1.5", isLightMode ? "border-slate-300/70" : "border-white/10")}>
                         <div className="flex items-center justify-between gap-2 text-[11px] font-medium tracking-[0.08em] text-slate-500">
                           <span className="min-w-0 truncate">{activeInspectorTitle ?? activeBoardName}</span>
                           {inspectorSectorStats ? (
                             <div className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                              <span className="text-[11px] font-semibold text-slate-600">
+                              <span className={cn("text-[11px] font-semibold", isLightMode ? "text-slate-600" : "text-slate-300")}>
                                 {formatBoardTrendCounts(
                                   messages,
                                   inspectorSectorStats.advanceCount,
@@ -7253,7 +7263,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                         <InspectorSortControls
                           sortKey={inspectorSortKey}
                           messages={messages}
-                          tone="light"
+                          tone={isLightMode ? "light" : "dark"}
                           showShortcutHint
                           onChange={setInspectorSortKey}
                         />
@@ -7270,16 +7280,23 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                             <div
                               key={stock.code}
                               className={cn(
-                                "grid grid-cols-[minmax(0,1fr)_56px_64px_80px] items-center gap-2 border-b border-b-slate-300/70 px-3 py-1.5 text-[12.5px]",
+                                "grid grid-cols-[minmax(0,1fr)_56px_64px_80px] items-center gap-2 border-b px-3 py-1.5 text-[12.5px]",
+                                isLightMode ? "border-b-slate-300/70" : "border-b-white/10",
                                 isActive
-                                  ? "sticky top-0 z-10 bg-white font-semibold shadow-[0_1px_0_rgba(15,23,42,0.08)]"
-                                  : "bg-[#f4f6f7]"
+                                  ? cn(
+                                      "sticky top-0 z-10 bg-white font-semibold shadow-[0_1px_0_rgba(15,23,42,0.08)]",
+                                      !isLightMode && "bg-[#161b22] text-slate-100"
+                                    )
+                                  : isLightMode
+                                    ? "bg-[#f4f6f7]"
+                                    : "bg-[#0c1015]"
                               )}
                             >
                               <span
                                 className={cn(
                                   "min-w-0 pr-1 font-medium leading-[1.2] [word-break:keep-all]",
-                                  isActive && "font-semibold text-slate-900"
+                                  isActive && isLightMode && "font-semibold text-slate-900",
+                                  isActive && !isLightMode && "font-semibold text-slate-100"
                                 )}
                               >
                                 {stock.name}
@@ -7292,7 +7309,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                                 decoding="async"
                                 referrerPolicy="no-referrer"
                               />
-                              <span className="text-right text-[11.5px] font-medium tabular-nums text-slate-700">
+                              <span
+                                className={cn(
+                                  "text-right text-[11.5px] font-medium tabular-nums",
+                                  isLightMode ? "text-slate-700" : "text-slate-300"
+                                )}
+                              >
                                 {formatPrice(stock.price)}
                               </span>
                               <span
