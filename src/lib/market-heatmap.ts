@@ -24,7 +24,7 @@ export const heatmapPeriodKeys = ["day", "week", "month", "year"] as const;
 
 export type HeatmapPeriodKey = (typeof heatmapPeriodKeys)[number];
 
-type MarketDataSource = "direct" | "fallback";
+export type MarketDataSource = "direct" | "fallback" | "stale";
 type ExchangeCode = "SH" | "SZ" | "BJ";
 
 type RemoteQuoteValue = {
@@ -1437,6 +1437,7 @@ function getFallbackSnapshot() {
   return baselineStocks.map((stock) => ({
     ...stock,
     turnoverAmount: estimateFallbackTurnoverAmount(stock),
+    changePct: 0,
   }));
 }
 
@@ -1661,6 +1662,35 @@ async function getFallbackQuoteData(
   return getFallbackQuoteDataFromStocks(marketStocks, period, metric);
 }
 
+// Synchronous, dependency-free snapshot: lets the client paint a full Canvas on the
+// very first frame (zero round-trips). Same shape/structure as a live treemap so the
+// render pipeline treats it identically; it is built on the zeroed snapshot so every
+// placeholder block reads 0% until real quotes arrive.
+export function getBundledSnapshotTreemap(period: HeatmapPeriodKey = "day"): TreemapResponse {
+  const stocks = getFallbackSnapshot();
+  const { advanceCount, flatCount, declineCount, turnoverAmount } = summarizeStocks(stocks, {}, period);
+  const nodes = buildNodesFromStocks(stocks, {}, period);
+
+  return {
+    market: "all",
+    period,
+    updatedAt: fallbackSnapshotSeed.updatedAt,
+    stockCount: stocks.length,
+    boardCount: nodes.length,
+    summary: {
+      advanceCount,
+      flatCount,
+      declineCount,
+      turnoverAmount,
+      turnoverPreviousAmount: 0,
+      turnoverDelta: 0,
+      indexChangePct: 0,
+    },
+    nodes,
+    source: "fallback",
+  };
+}
+
 async function getFallbackTreemapData(
   market: MarketKey,
   period: HeatmapPeriodKey,
@@ -1704,6 +1734,17 @@ export async function getTreemapData(
   market: MarketKey,
   period: HeatmapPeriodKey = "day"
 ): Promise<TreemapResponse> {
+  // First paint paints instantly on a bundled snapshot, so the very first load of a
+  // cold visit shows a real heatmap instead of a waiting screen. Stale snapshots are
+  // intentionally not cached, so hot (warm-module / shared-cache) visits go straight
+  // to live data.
+  if (!quoteCache && !quotePromise) {
+    // Kick the live fetch off in the background so it's cached by the time the first
+    // poll lands; the next call then serves real data instead of this snapshot.
+    void getQuoteSnapshot().catch(() => {});
+    return getFallbackTreemapData(market, period);
+  }
+
   const [quoteResult, summaryResult, indexResult] = await Promise.allSettled([
     getQuoteSnapshot(),
     getMarketSummary(),
@@ -1731,11 +1772,12 @@ export async function getTreemapData(
   const computedSummary = summarizeStocks(marketStocks, quoteResult.value.quotes, period);
   const computedIndexChangePct = weightedChangePct(marketStocks, quoteResult.value.quotes, period);
   const remoteSummary = summaryResult.status === "fulfilled" ? summaryResult.value : null;
+  const liveUpdatedAt = remoteSummary?.updatedAt ?? quoteResult.value.updatedAt;
 
   return {
     market,
     period,
-    updatedAt: remoteSummary?.updatedAt ?? quoteResult.value.updatedAt,
+    updatedAt: liveUpdatedAt,
     stockCount: marketStocks.length,
     boardCount: nodes.length,
     summary: {
@@ -1756,7 +1798,7 @@ export async function getTreemapData(
       indexChangePct: Number.isFinite(remoteIndexChangePct) ? remoteIndexChangePct : computedIndexChangePct,
     },
     nodes,
-    source: "direct",
+    source: quoteResult.value.source === "direct" ? "direct" : "stale",
   };
 }
 
@@ -1765,6 +1807,17 @@ export async function getQuoteData(
   period: HeatmapPeriodKey = "day",
   metric?: MetricKey
 ): Promise<QuotesResponse> {
+  // First paint always paints instantly on a bundled snapshot: a cold visit shows a
+  // familiar heatmap shape right away while live data streams in (ballooned by the
+  // browser fetch that started on the same request) instead of a waiting screen.
+  // Stale snapshots are never cached, so warm (warm-module / shared-cache) visits
+  // go straight to live data.
+  if (!quoteCache && !quotePromise) {
+    // Kick the live fetch off in the background so the next poll serves real data.
+    void getQuoteSnapshot().catch(() => {});
+    return getFallbackQuoteData(market, period, metric);
+  }
+
   const quoteResult = await Promise.allSettled([getQuoteSnapshot()]);
 
   if (quoteResult[0].status !== "fulfilled") {
@@ -1798,7 +1851,7 @@ export async function getQuoteData(
     metric,
     updatedAt: quoteResult[0].value.updatedAt,
     quotes,
-    source: "direct",
+    source: quoteResult[0].value.source === "direct" ? "direct" : "stale",
   };
 }
 
@@ -1879,13 +1932,38 @@ export async function getQuoteDataByCodes(
     metric,
     updatedAt: quoteResult[0].value.updatedAt,
     quotes,
-    source: "direct",
+    source: quoteResult[0].value.source === "direct" ? "direct" : "stale",
   };
 }
 
 export async function getOverviewData(
   period: HeatmapPeriodKey = "day"
 ): Promise<MarketOverviewResponse> {
+  // First paint paints instantly on a bundled snapshot (see getTreemapData).
+  if (!quoteCache && !quotePromise) {
+    // Kick the live fetch off in the background so the next poll serves real data.
+    void getQuoteSnapshot().catch(() => {});
+    const fallbackMarkets: MarketOverviewItem[] = await Promise.all(
+      marketKeys.map(async (market) => {
+        const stocks = await filterStocks(baselineStocks, market);
+        const changePct = weightedChangePct(stocks, {}, period);
+        return {
+          market,
+          changePct: Number.isFinite(changePct) ? changePct : 0,
+          stockCount: stocks.length,
+          updatedAt: fallbackSnapshotSeed.updatedAt,
+        };
+      })
+    );
+
+    return {
+      period,
+      updatedAt: fallbackSnapshotSeed.updatedAt,
+      markets: fallbackMarkets,
+      source: "fallback",
+    };
+  }
+
   const [quoteResult, indexResult] = await Promise.allSettled([
     getQuoteSnapshot(),
     getMarketIndexSnapshot(),
@@ -1947,6 +2025,6 @@ export async function getOverviewData(
     period,
     updatedAt: quoteResult.value.updatedAt,
     markets,
-    source: "direct",
+    source: quoteResult.value.source === "direct" ? "direct" : "stale",
   };
 }

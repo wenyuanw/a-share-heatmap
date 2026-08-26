@@ -97,8 +97,10 @@ import {
   marketKeys,
   watchlistMaxCount,
   watchlistUniverseKey,
+  getBundledSnapshotTreemap,
   type HeatmapPeriodKey,
   type HeatmapUniverse,
+  type MarketDataSource,
   type MarketKey,
   type MarketOverviewResponse,
   type TreemapResponse,
@@ -3925,9 +3927,16 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [marketSummaries, setMarketSummaries] = useState<Partial<Record<MarketKey, MarketSummary>>>({});
   const [treemapData, setTreemapData] = useState<TreemapResponse | null>(null);
   const [quotes, setQuotes] = useState<QuoteMap>({});
+  const [dataSource, setDataSource] = useState<MarketDataSource | null>(null);
+  // The bundled sample snapshot is fetched once on mount and reused as an instant
+  // pre-preference fallback so the very first render can already paint a full Canvas.
+  const [initialSnapshot] = useState<TreemapResponse | null>(() => getBundledSnapshotTreemap());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState("");
+  // Set once the Canvas has painted the bundled sample — from then on the sample
+  // stays visible instead of being masked by the full-screen loading overlay.
+  const [samplePainted, setSamplePainted] = useState(false);;
 
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 760 });
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
@@ -4345,6 +4354,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
           setTreemapData(createEmptyWatchlistTreemap(nextPeriod));
           setQuotes({});
           setUpdatedAt("");
+          setDataSource(null);
           return;
         }
 
@@ -4360,6 +4370,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         const payload = (await response.json()) as TreemapResponse;
         setTreemapData(payload);
         setUpdatedAt(payload.updatedAt);
+        setDataSource(payload.source);
         return;
       }
 
@@ -4371,6 +4382,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       const payload = (await response.json()) as TreemapResponse;
       setTreemapData(payload);
       setUpdatedAt(payload.updatedAt);
+      setDataSource(payload.source);
     },
     [messages.errorLoad]
   );
@@ -4392,9 +4404,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
           throw new Error(messages.errorLoad);
         }
 
-        const payload = (await response.json()) as { updatedAt: string; quotes: QuoteMap };
+        const payload = (await response.json()) as { updatedAt: string; quotes: QuoteMap; source?: MarketDataSource };
         setQuotes(payload.quotes);
         setUpdatedAt(payload.updatedAt);
+        if (payload.source) {
+          setDataSource(payload.source);
+        }
         return;
       }
 
@@ -4403,9 +4418,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         throw new Error(messages.errorLoad);
       }
 
-      const payload = (await response.json()) as { updatedAt: string; quotes: QuoteMap };
+      const payload = (await response.json()) as { updatedAt: string; quotes: QuoteMap; source?: MarketDataSource };
       setQuotes(payload.quotes);
       setUpdatedAt(payload.updatedAt);
+      if (payload.source) {
+        setDataSource(payload.source);
+      }
     },
     [messages.errorLoad]
   );
@@ -4533,11 +4551,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         setTreemapData(createEmptyWatchlistTreemap(period));
         setQuotes({});
         setUpdatedAt("");
+        setDataSource(null);
         setLoading(false);
         return;
       }
 
       setLoading(true);
+      setError(null);
 
       try {
         await fetchTreemap(market, period, watchlistCodes);
@@ -4792,8 +4812,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     return parts.join(" · ");
   }, [boardFilter, changeRangeFilter, messages.fallingOnly, messages.risingOnly, messages.selectedBoardCount, trendFilter]);
 
+  // Before live data arrives, fall back to the bundled sample snapshot so the canvas
+  // always has a full heatmap to paint — even on the very first render.
   const visibleTreemapData = useMemo<TreemapResponse | null>(() => {
     if (!treemapData) {
+      return initialSnapshot;
+    }
+
+    if (initialSnapshot && boardFilter.length === 0 && trendFilter === allTrendsValue && !isChangeRangeActive(changeRangeFilter)) {
       return treemapData;
     }
 
@@ -5413,8 +5439,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
     background.addColorStop(0, heatmapCanvasTheme.backgroundStart);
     background.addColorStop(1, heatmapCanvasTheme.backgroundEnd);
-
-    context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = background;
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -5565,6 +5589,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     }
 
     context.restore();
+
+    // First successful paint of any data makes the sample Canvas authoritative —
+    // hide the full-screen loading overlay from then on so it never masks the bars.
+    if (!samplePainted) {
+      setSamplePainted(true);
+    }
   }, [
     canvasSize.height,
     canvasSize.width,
@@ -5584,6 +5614,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     activeHeatTheme,
     displayMode,
     priceColorMode,
+    samplePainted,
     view.scale,
     view.x,
     view.y,
@@ -6580,7 +6611,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     toggleFullscreen,
   ]);
 
-  const lastUpdatedText = updatedAt ? new Date(updatedAt).toLocaleTimeString() : "--:--:--";
+  const lastUpdatedText =
+    // A freshly-loaded archival snapshot has a fixed old timestamp; label it clearly so
+    // the clock never misreads as stale data once live quotes have streamed in.
+    dataSource === "fallback"
+      ? messages.sampleDataLabel
+      : updatedAt
+        ? new Date(updatedAt).toLocaleTimeString()
+        : "--:--:--";
   const watchlistChangePct =
     isWatchlist && treemapData && treemapData.stockCount > 0 ? treemapData.summary.indexChangePct : undefined;
 
@@ -6668,8 +6706,15 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                 <span className={cn("font-semibold uppercase tracking-[0.12em]", isEnglish ? "text-[8.5px]" : "text-[9px]")}>
                   {messages.lastUpdated}
                 </span>
-                <span className={cn("font-semibold tabular-nums text-foreground", isEnglish ? "text-[9px]" : "text-[10px]")}>
-                  {lastUpdatedText}
+                <span className={cn("inline-flex items-center gap-1 font-semibold tabular-nums text-foreground", isEnglish ? "text-[9px]" : "text-[10px]")}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="size-2.5 animate-spin text-brand" aria-hidden />
+                      {messages.updating}
+                    </>
+                  ) : (
+                    lastUpdatedText
+                  )}
                 </span>
               </div>
               <div className={cn("space-y-1", isEnglish && "space-y-0.5")}>
@@ -7274,7 +7319,23 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               </aside>
             )}
 
-            {loading && <HeatmapLoadingOverlay displayMode={displayMode} messages={messages} />}
+            {loading && !samplePainted && <HeatmapLoadingOverlay displayMode={displayMode} messages={messages} />}
+
+            {samplePainted && dataSource !== "direct" && !error && (
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium shadow-lg backdrop-blur-sm",
+                    isLightMode
+                      ? "border-slate-200 bg-white/85 text-slate-600"
+                      : "border-slate-700/70 bg-[#0f1319]/80 text-slate-300"
+                  )}
+                >
+                  <Loader2 className="size-3 animate-spin text-brand" aria-hidden />
+                  {messages.loadingLiveData}
+                </div>
+              </div>
+            )}
 
             {error && !loading && (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80 text-sm text-destructive backdrop-blur-sm">
@@ -7311,10 +7372,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         {!isFullscreen && (
           <div
             className={cn(
-              "col-span-1 row-start-2 border-t border-border px-3 py-1.5 sm:px-4 md:col-start-2",
+              "relative col-span-1 row-start-2 border-t border-border px-3 py-1.5 sm:px-4 md:col-start-2",
               isLightMode ? "bg-white/88 backdrop-blur-sm" : "bg-[#151a21]"
             )}
           >
+            {(loading || dataSource === "fallback") && !error && (
+              <div className="hm-bottom-loader inset-x-0 top-0 h-[2px]" aria-hidden />
+            )}
             <div className="flex items-center gap-1.5 sm:gap-3">
               <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
                 {(!sidebarOpen || desktopSidebarCollapsed) && (
