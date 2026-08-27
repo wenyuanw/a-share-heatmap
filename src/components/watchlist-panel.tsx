@@ -5,15 +5,16 @@ import {
   useId,
   useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { Check, Loader2, Plus, Search, Sparkles, X } from "lucide-react";
+import { Check, Download, Loader2, Plus, Search, Sparkles, Upload, X } from "lucide-react";
 
 import { WatchlistAiDialog } from "@/components/watchlist-ai-dialog";
 import { cn } from "@/lib/utils";
 import type { HeatmapMessages, Locale } from "@/lib/i18n";
-import type { WatchlistExchange, WatchlistItem } from "@/lib/watchlist";
+import { buildWatchlistExport, type WatchlistExchange, type WatchlistItem } from "@/lib/watchlist";
 import { isWatchlistAiConfigured, loadWatchlistAiConfig } from "@/lib/watchlist-ai";
 import { toast } from "sonner";
 
@@ -90,6 +91,7 @@ export function WatchlistManager({
   onAdd,
   onRemove,
   onClear,
+  onImportText,
 }: {
   messages: HeatmapMessages;
   locale: Locale;
@@ -100,10 +102,44 @@ export function WatchlistManager({
   onAdd: (item: WatchlistItem) => boolean;
   onRemove: (code: string) => void;
   onClear: () => void;
+  onImportText: (raw: string) => void;
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExport = () => {
+    if (items.length === 0) {
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(buildWatchlistExport(items), null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `heatmap-watchlist-export-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    let raw = "";
+    try {
+      raw = await file.text();
+    } catch {
+      // Read failures surface as an invalid payload through the same toast path.
+    }
+    onImportText(raw);
+  };
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<StockSearchItem[]>([]);
   const [searching, setSearching] = useState(false);
@@ -493,9 +529,39 @@ export function WatchlistManager({
             })}
           </div>
         )}
-        <p className="mt-1.5 shrink-0 text-[11px] text-muted-foreground">
-          {items.length}/{maxCount}
-        </p>
+        <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground">
+            {items.length}/{maxCount}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              aria-label={messages.watchlistImportAction}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-transparent px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Upload className="size-3" />
+              {messages.watchlistImportAction}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={items.length === 0}
+              aria-label={messages.watchlistExportAction}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-transparent px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Download className="size-3" />
+              {messages.watchlistExportAction}
+            </button>
+          </div>
+        </div>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          onChange={handleImportFile}
+          className="hidden"
+        />
       </section>
 
       <WatchlistAiDialog

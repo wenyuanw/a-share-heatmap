@@ -11,7 +11,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import {
   Camera,
@@ -107,6 +106,7 @@ import {
 } from "@/lib/market-heatmap";
 import {
   parseStoredWatchlist,
+  parseWatchlistExportPayload,
   serializeWatchlist,
   watchlistStorageKey,
   type WatchlistItem,
@@ -224,7 +224,6 @@ type FilterOpenMode = "click" | "hover";
 type SettingsTab = "appearance" | "watchlist" | "shortcuts" | "help" | "project";
 type HeatmapSizeMode = "marketCap" | "turnover";
 
-const refreshIntervalMs = 8000;
 const marketOptions: MarketKey[] = [...marketKeys];
 const periodOptions: HeatmapPeriodKey[] = [...heatmapPeriodKeys];
 
@@ -260,6 +259,18 @@ const changeRangeFilterStorageKey = "heatmap-change-range-filter";
 const filterOpenModeStorageKey = "heatmap-filter-open-mode";
 const thumbnailModeStorageKey = "heatmap-thumbnail-mode";
 const headerTrendStatsStorageKey = "heatmap-header-trend-stats";
+const refreshIntervalStorageKey = "heatmap-refresh-interval";
+const defaultRefreshIntervalSeconds = 8;
+const minRefreshIntervalSeconds = 3;
+const maxRefreshIntervalSeconds = 600;
+
+function normalizeRefreshIntervalSeconds(raw: string | null): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(parsed)) {
+    return defaultRefreshIntervalSeconds;
+  }
+  return Math.min(maxRefreshIntervalSeconds, Math.max(minRefreshIntervalSeconds, parsed));
+}
 const filterHoverOpenDelayMs = 180;
 const filterHoverCloseDelayMs = 160;
 const changeRangeSliderMin = -20;
@@ -942,12 +953,14 @@ function InspectorSortControls({
   messages,
   tone = "light",
   showShortcutHint = false,
+  watchlistHint,
   onChange,
 }: {
   sortKey: InspectorSortKey;
   messages: HeatmapMessages;
   tone?: "light" | "dark";
   showShortcutHint?: boolean;
+  watchlistHint?: string;
   onChange: (next: InspectorSortKey) => void;
 }) {
   const isDark = tone === "dark";
@@ -994,7 +1007,7 @@ function InspectorSortControls({
             isDark ? "text-slate-500" : "text-slate-400"
           )}
         >
-          {messages.inspectorSortHint}
+          {[watchlistHint, messages.inspectorSortHint].filter(Boolean).join(" · ")}
         </span>
       )}
     </div>
@@ -1030,6 +1043,7 @@ function getShortcutActionLabel(messages: HeatmapMessages, action: ShortcutActio
   if (action === "settings") return messages.shortcutActionSettings;
   if (action === "sidebar") return messages.shortcutActionSidebar;
   if (action === "filters") return messages.shortcutActionFilters;
+  if (action === "toggleWatchlist") return messages.shortcutActionToggleWatchlist;
   return messages.shortcutActionDisplayMode;
 }
 
@@ -1952,9 +1966,11 @@ function MobileStockSheet({
   heatTheme,
   displayMode,
   sortKey,
+  isInWatchlist,
   onSortChange,
   onClose,
   onSelectStock,
+  onToggleWatchlist,
   onOpenXueqiu,
 }: {
   title: string | null;
@@ -1970,9 +1986,11 @@ function MobileStockSheet({
   heatTheme: HeatTheme;
   displayMode: DisplayMode;
   sortKey: InspectorSortKey;
+  isInWatchlist: boolean;
   onSortChange: (next: InspectorSortKey) => void;
   onClose: () => void;
   onSelectStock: (code: string) => void;
+  onToggleWatchlist: () => void;
   onOpenXueqiu: (code: string) => void;
 }) {
   return (
@@ -2036,6 +2054,19 @@ function MobileStockSheet({
             </div>
 
             <div className="flex items-center justify-between gap-2 px-4 pb-3">
+              <button
+                type="button"
+                onClick={onToggleWatchlist}
+                className={cn(
+                  "inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-[13px] font-medium transition-colors",
+                  isInWatchlist
+                    ? "border-amber-400/70 bg-amber-400/15 text-amber-200 hover:bg-amber-400/25"
+                    : "border-slate-600 bg-slate-800/70 text-slate-100 hover:bg-slate-700/80"
+                )}
+              >
+                <Star className="size-3.5" fill={isInWatchlist ? "currentColor" : "none"} />
+                {isInWatchlist ? messages.watchlistQuickRemove : messages.watchlistQuickAdd}
+              </button>
               <button
                 type="button"
                 onClick={() => onOpenXueqiu(stock.code)}
@@ -2671,8 +2702,12 @@ function ChangeRangeSlider({
   const dragThumbRef = useRef<"min" | "max" | null>(null);
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
-  valueRef.current = value;
-  onChangeRef.current = onChange;
+
+  // Sync refs from props in a passive effect — writing them during render is unsafe.
+  useEffect(() => {
+    valueRef.current = value;
+    onChangeRef.current = onChange;
+  });
 
   const bounds = filterToSliderBounds(value);
   const span = changeRangeSliderMax - changeRangeSliderMin;
@@ -3274,6 +3309,7 @@ function SettingsDrawer({
   displayMode,
   filterOpenMode,
   headerTrendStats,
+  refreshIntervalSeconds,
   themeColor,
   priceColorMode,
   heatThemeId,
@@ -3287,6 +3323,7 @@ function SettingsDrawer({
   onDisplayModeChange,
   onFilterOpenModeChange,
   onHeaderTrendStatsChange,
+  onRefreshIntervalChange,
   onThemeColorChange,
   onPriceColorModeChange,
   onHeatThemeIdChange,
@@ -3296,6 +3333,7 @@ function SettingsDrawer({
   onWatchlistAdd,
   onWatchlistRemove,
   onWatchlistClear,
+  onWatchlistImportText,
   areaTipMessage,
 }: {
   open: boolean;
@@ -3305,6 +3343,7 @@ function SettingsDrawer({
   displayMode: DisplayMode;
   filterOpenMode: FilterOpenMode;
   headerTrendStats: boolean;
+  refreshIntervalSeconds: number;
   themeColor: ThemeColorKey;
   priceColorMode: PriceColorMode;
   heatThemeId: string;
@@ -3319,6 +3358,7 @@ function SettingsDrawer({
   onDisplayModeChange: (mode: DisplayMode) => void;
   onFilterOpenModeChange: (mode: FilterOpenMode) => void;
   onHeaderTrendStatsChange: (enabled: boolean) => void;
+  onRefreshIntervalChange: (seconds: number) => void;
   onThemeColorChange: (theme: ThemeColorKey) => void;
   onPriceColorModeChange: (mode: PriceColorMode) => void;
   onHeatThemeIdChange: (id: string) => void;
@@ -3328,9 +3368,33 @@ function SettingsDrawer({
   onWatchlistAdd: (item: WatchlistItem) => boolean;
   onWatchlistRemove: (code: string) => void;
   onWatchlistClear: () => void;
+  onWatchlistImportText: (raw: string) => void;
 }) {
   const isMobile = useIsMobile();
   const [recordingAction, setRecordingAction] = useState<ShortcutActionId | null>(null);
+  const [intervalDraft, setIntervalDraft] = useState(() => String(refreshIntervalSeconds));
+
+  useEffect(() => {
+    setIntervalDraft(String(refreshIntervalSeconds));
+  }, [refreshIntervalSeconds]);
+
+  // Discard an uncommitted draft when the drawer closes without a blur event.
+  useEffect(() => {
+    if (!open) {
+      setIntervalDraft(String(refreshIntervalSeconds));
+    }
+  }, [open, refreshIntervalSeconds]);
+
+  const commitRefreshInterval = () => {
+    const parsed = Number.parseInt(intervalDraft, 10);
+    if (!Number.isFinite(parsed)) {
+      setIntervalDraft(String(refreshIntervalSeconds));
+      return;
+    }
+    onRefreshIntervalChange(
+      Math.min(maxRefreshIntervalSeconds, Math.max(minRefreshIntervalSeconds, parsed))
+    );
+  };
 
   useEffect(() => {
     if (!open || tab !== "shortcuts") {
@@ -3578,6 +3642,38 @@ function SettingsDrawer({
                   </div>
                 </section>
 
+                <section>
+                  <h3 className="text-sm font-semibold">{messages.settingsRefreshIntervalLabel}</h3>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={minRefreshIntervalSeconds}
+                      max={maxRefreshIntervalSeconds}
+                      step={1}
+                      value={intervalDraft}
+                      onChange={(event) => setIntervalDraft(event.target.value)}
+                      onBlur={commitRefreshInterval}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      aria-label={messages.settingsRefreshIntervalLabel}
+                      className="w-24 border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground transition-colors outline-none focus:border-brand/70 focus:ring-2 focus:ring-brand/30 md:py-3"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {messages.settingsRefreshIntervalUnit}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {messages.settingsRefreshIntervalHint.replace(
+                      "{min}",
+                      String(minRefreshIntervalSeconds)
+                    ).replace("{max}", String(maxRefreshIntervalSeconds))}
+                  </p>
+                </section>
+
                 {!isMobile && (
                   <section>
                     <h3 className="text-sm font-semibold">{messages.filterOpenModeLabel}</h3>
@@ -3699,6 +3795,7 @@ function SettingsDrawer({
                 onAdd={onWatchlistAdd}
                 onRemove={onWatchlistRemove}
                 onClear={onWatchlistClear}
+                onImportText={onWatchlistImportText}
               />
             )}
 
@@ -3924,6 +4021,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [sizeMode, setSizeMode] = useState<HeatmapSizeMode>("marketCap");
   const [thumbnailMode, setThumbnailMode] = useState(false);
   const [headerTrendStats, setHeaderTrendStats] = useState(true);
+  const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(defaultRefreshIntervalSeconds);
   const [marketSummaries, setMarketSummaries] = useState<Partial<Record<MarketKey, MarketSummary>>>({});
   const [treemapData, setTreemapData] = useState<TreemapResponse | null>(null);
   const [quotes, setQuotes] = useState<QuoteMap>({});
@@ -4059,6 +4157,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       const storedSizeMode = window.localStorage.getItem("heatmap-size-mode");
       const storedThumbnailMode = window.localStorage.getItem(thumbnailModeStorageKey);
       const storedHeaderTrendStats = window.localStorage.getItem(headerTrendStatsStorageKey);
+      const storedRefreshInterval = window.localStorage.getItem(refreshIntervalStorageKey);
       const storedMarket = window.sessionStorage.getItem(marketStorageKey);
       const storedPeriod = window.sessionStorage.getItem(periodStorageKey);
       const storedBoardFilter = window.sessionStorage.getItem(boardFilterStorageKey);
@@ -4093,6 +4192,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       if (storedHeaderTrendStats === "on" || storedHeaderTrendStats === "off") {
         setHeaderTrendStats(storedHeaderTrendStats === "on");
       }
+      setRefreshIntervalSeconds(normalizeRefreshIntervalSeconds(storedRefreshInterval));
       const storedWatchlist = window.localStorage.getItem(watchlistStorageKey);
       setWatchlist(parseStoredWatchlist(storedWatchlist));
       if (storedMarket && isHeatmapUniverse(storedMarket)) {
@@ -4238,6 +4338,17 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       return;
     }
     try {
+      window.localStorage.setItem(refreshIntervalStorageKey, String(refreshIntervalSeconds));
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [refreshIntervalSeconds, preferencesReady]);
+
+  useEffect(() => {
+    if (!preferencesReady) {
+      return;
+    }
+    try {
       window.sessionStorage.setItem(marketStorageKey, market);
     } catch {
       /* Preferences are optional. */
@@ -4345,6 +4456,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   }, []);
 
   const watchlistCodes = useMemo(() => watchlist.map((item) => item.code), [watchlist]);
+  const watchlistCodeSet = useMemo(() => new Set(watchlistCodes), [watchlistCodes]);
   const isWatchlist = market === watchlistUniverseKey;
 
   const fetchTreemap = useCallback(
@@ -4590,7 +4702,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         setError(messages.errorLoad);
       }
     }, [fetchQuotes, market, messages.errorLoad, period, preferencesReady, watchlistCodes]),
-    refreshIntervalMs
+    refreshIntervalSeconds * 1000
   );
 
   usePollWhileVisible(
@@ -4604,7 +4716,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         // Keep existing summaries if the refresh fails.
       }
     }, [fetchMarketSummaries, period, preferencesReady]),
-    refreshIntervalMs
+    refreshIntervalSeconds * 1000
   );
 
   useEffect(() => {
@@ -4736,6 +4848,63 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     setWatchlist([]);
     toast.success(messages.watchlistClearSuccess, { id: "heatmap-watchlist" });
   }, [messages.watchlistClearSuccess]);
+
+  const toggleWatchlistItem = useCallback(
+    (stock: {
+      code: string;
+      name: string;
+      boardName?: string | null;
+      subBoardName?: string | null;
+    }) => {
+      if (watchlist.some((item) => item.code === stock.code)) {
+        removeWatchlistItem(stock.code);
+        return;
+      }
+
+      const exchange = parseStockCode(stock.code).market;
+      addWatchlistItem({
+        code: stock.code,
+        name: stock.name,
+        boardName: stock.boardName ?? undefined,
+        subBoardName: stock.subBoardName ?? undefined,
+        exchange: exchange === "SH" || exchange === "SZ" || exchange === "BJ" ? exchange : undefined,
+      });
+    },
+    [addWatchlistItem, removeWatchlistItem, watchlist]
+  );
+
+  const importWatchlistFromText = useCallback(
+    (raw: string) => {
+      const imported = parseWatchlistExportPayload(raw);
+      if (!imported || imported.length === 0) {
+        toast.error(messages.watchlistImportFailed, { id: "heatmap-watchlist" });
+        return;
+      }
+
+      const seen = new Set(watchlist.map((item) => item.code));
+      const merged = [...watchlist];
+      let added = 0;
+      let skipped = 0;
+      for (const item of imported) {
+        if (seen.has(item.code) || merged.length >= watchlistMaxCount) {
+          skipped += 1;
+          continue;
+        }
+        seen.add(item.code);
+        merged.push(item);
+        added += 1;
+      }
+
+      setWatchlist(merged);
+      toast.success(
+        messages.watchlistImportSuccess
+          .replace("{added}", String(added))
+          .replace("{skipped}", String(skipped)),
+        { id: "heatmap-watchlist" }
+      );
+    },
+    [messages.watchlistImportFailed, messages.watchlistImportSuccess, watchlist]
+  );
 
   const handleFilterHoverEnter = useCallback(() => {
     if (!isDesktopHoverFilterMode) {
@@ -4904,7 +5073,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     result = applyTrendFilter(result);
     result = applyChangeRangeFilter(result);
     return result;
-  }, [boardFilter, changeRangeFilter, quotes, trendFilter, treemapData]);
+  }, [boardFilter, changeRangeFilter, initialSnapshot, quotes, trendFilter, treemapData]);
 
   const marketOverview = useMemo<MarketOverview | null>(() => {
     if (!visibleTreemapData) {
@@ -5821,7 +5990,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   }, [isMobile]);
 
   const onWheel = useCallback(
-    (event: ReactWheelEvent<HTMLCanvasElement>) => {
+    (event: WheelEvent) => {
       event.preventDefault();
 
       const canvas = canvasRef.current;
@@ -5856,6 +6025,20 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     },
     [canvasSize.height, canvasSize.width]
   );
+
+  // React delegates wheel listeners as passive at the root, so preventDefault()
+  // must run in our own non-passive native listener instead of the onWheel prop.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+    };
+  }, [onWheel]);
 
   const toggleBoardFilter = useCallback((boardName: string) => {
     setBoardFilter((current) => toggleBoardInFilter(current, boardName));
@@ -6578,6 +6761,11 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         case "filters":
           toggleFilters();
           break;
+        case "toggleWatchlist":
+          if (!isMobile && activeStock) {
+            toggleWatchlistItem(activeStock);
+          }
+          break;
         case "sidebar":
           if (isMobile) {
             setSidebarOpen((current) => !current);
@@ -6596,6 +6784,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [
+    activeStock,
     closeSharePreview,
     createSharePreview,
     filtersOpen,
@@ -6609,6 +6798,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     shortcutRecording,
     toggleFilters,
     toggleFullscreen,
+    toggleWatchlistItem,
   ]);
 
   const lastUpdatedText =
@@ -7139,7 +7329,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               onMouseMove={onMouseMove}
               onMouseUp={onMouseUp}
               onMouseLeave={onMouseLeave}
-              onWheel={onWheel}
               onClick={onCanvasClick}
               onDoubleClick={onDoubleClick}
             />
@@ -7265,6 +7454,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                           messages={messages}
                           tone={isLightMode ? "light" : "dark"}
                           showShortcutHint
+                          watchlistHint={`${formatShortcutLabel(
+                            shortcutBindings.toggleWatchlist
+                          )} ${messages.inspectorWatchlistHint}`}
                           onChange={setInspectorSortKey}
                         />
                       </div>
@@ -7275,6 +7467,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                       >
                         {inspectorStocks.map((stock) => {
                           const isActive = stock.active;
+                          const isWatchlisted = watchlistCodeSet.has(stock.code);
 
                           return (
                             <div
@@ -7292,15 +7485,27 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
                                     : "bg-[#0c1015]"
                               )}
                             >
-                              <span
-                                className={cn(
-                                  "min-w-0 pr-1 font-medium leading-[1.2] [word-break:keep-all]",
-                                  isActive && isLightMode && "font-semibold text-slate-900",
-                                  isActive && !isLightMode && "font-semibold text-slate-100"
+                              <div className="flex min-w-0 items-center gap-1">
+                                <span
+                                  className={cn(
+                                    "min-w-0 font-medium leading-[1.2] [word-break:keep-all]",
+                                    isActive && isLightMode && "font-semibold text-slate-900",
+                                    isActive && !isLightMode && "font-semibold text-slate-100"
+                                  )}
+                                >
+                                  {stock.name}
+                                </span>
+                                {isWatchlisted && (
+                                  <Star
+                                    aria-hidden
+                                    className={cn(
+                                      "size-3 shrink-0",
+                                      isLightMode ? "text-amber-500" : "text-amber-400"
+                                    )}
+                                    fill="currentColor"
+                                  />
                                 )}
-                              >
-                                {stock.name}
-                              </span>
+                              </div>
                               <img
                                 src={getSparklineUrl(stock.code)}
                                 alt=""
@@ -7612,9 +7817,15 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
           heatTheme={activeHeatTheme}
           displayMode={displayMode}
           sortKey={inspectorSortKey}
+          isInWatchlist={Boolean(activeInspectorStock && watchlistCodes.includes(activeInspectorStock.code))}
           onSortChange={setInspectorSortKey}
           onClose={closeMobileSheet}
           onSelectStock={setSelectedStockCode}
+          onToggleWatchlist={() => {
+            if (activeInspectorStock) {
+              toggleWatchlistItem(activeInspectorStock);
+            }
+          }}
           onOpenXueqiu={openXueqiuForStock}
         />
       )}
@@ -7679,6 +7890,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         onDisplayModeChange={setDisplayMode}
         onFilterOpenModeChange={setFilterOpenMode}
         onHeaderTrendStatsChange={setHeaderTrendStats}
+        refreshIntervalSeconds={refreshIntervalSeconds}
+        onRefreshIntervalChange={setRefreshIntervalSeconds}
         onThemeColorChange={setThemeColor}
         onPriceColorModeChange={setPriceColorMode}
         onHeatThemeIdChange={setHeatThemeId}
@@ -7688,6 +7901,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         onWatchlistAdd={addWatchlistItem}
         onWatchlistRemove={removeWatchlistItem}
         onWatchlistClear={clearWatchlist}
+        onWatchlistImportText={importWatchlistFromText}
       />
 
       {sharePreview && (
