@@ -3530,7 +3530,7 @@ function SettingsDrawer({
   }, [open, tab]);
 
   useEffect(() => {
-    if (isMobile && (tab === "shortcuts" || tab === "help")) {
+    if (isMobile && (tab === "shortcuts" || tab === "help" || tab === "webmcp")) {
       onTabChange("appearance");
     }
   }, [isMobile, onTabChange, tab]);
@@ -3615,7 +3615,7 @@ function SettingsDrawer({
           { key: "help" as const, label: messages.settingsHelp, icon: Info },
         ]
       : []),
-    { key: "webmcp", label: messages.settingsWebmcp, icon: Bot },
+    ...(!isMobile ? [{ key: "webmcp" as const, label: messages.settingsWebmcp, icon: Bot }] : []),
     { key: "project", label: messages.settingsProject, icon: ExternalLink },
   ];
   const themeLabels: Record<ThemeColorKey, string> = isEnglish

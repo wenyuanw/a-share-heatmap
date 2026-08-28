@@ -94,6 +94,10 @@ ChatGPT 桌面版的内置浏览器支持通过 Site tools 使用网页提供的
 请使用当前页面的 Site tools 创建并应用一个赛博朋克风格的热力图主题：上涨 #00e5ff，下跌 #ff2bd6，横盘 #7c3aed。
 ```
 
+视频演示：
+
+<video src="https://github.com/user-attachments/assets/6ac63bdf-8357-456b-ba00-ec7d54bb96e7" width="820" />
+
 #### 使用 Chrome 和 Inspector 调试
 
 WebMCP 仍处于实验阶段。开发测试时，可以打开 `chrome://flags/#enable-webmcp-testing`，将选项设为 Enabled 并重启 Chrome；也可以参加 Chrome 149 起提供的 [Origin Trial](https://developer.chrome.com/docs/ai/webmcp)。完整的 API 与实验说明可参考 [Chrome WebMCP 官方文档](https://developer.chrome.com/docs/ai/webmcp)。在页面中安装并打开 [WebMCP Model Context Tool Inspector](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)，即可查看和手动调用已注册工具。这是 WebMCP 的调试路径，不等同于 ChatGPT 桌面版内置浏览器的 Site tools 调用。
