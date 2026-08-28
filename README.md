@@ -97,6 +97,7 @@ ChatGPT 桌面版的内置浏览器支持通过 Site tools 使用网页提供的
 视频演示：
 
 <video src="https://github.com/user-attachments/assets/6ac63bdf-8357-456b-ba00-ec7d54bb96e7" width="820" />
+</video>
 
 #### 使用 Chrome 和 Inspector 调试
 
