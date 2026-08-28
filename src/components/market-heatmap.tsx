@@ -452,7 +452,8 @@ function matchesChangeRange(changePct: number, range: ChangeRangeFilter) {
 const colorLegendSteps = [-4, -3, -2, -1, 0, 1, 2, 3, 4] as const;
 const legendTicks = [-4, -2, 0, 2, 4] as const;
 const minZoom = 1;
-const maxZoom = 3;
+const desktopMaxZoom = 8;
+const mobileMaxZoom = 12;
 const flatThreshold = 0.1;
 const githubProjectUrl = "https://github.com/wenyuanw/a-share-heatmap";
 const authorEmail = "hi@wenyuanw.me";
@@ -4119,6 +4120,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const isEnglish = locale === "en";
   const isLightMode = displayMode === "light";
   const isMobile = useIsMobile();
+  const maxZoom = isMobile ? mobileMaxZoom : desktopMaxZoom;
   const isDesktopHoverFilterMode = !isMobile && filterOpenMode === "hover";
   const activeHeatTheme = useMemo(
     () => resolveHeatTheme(heatThemeId, customHeatThemes),
@@ -4667,6 +4669,16 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         return current.x === 0 && current.y === 0 ? current : { scale: 1, x: 0, y: 0 };
       }
 
+      if (current.scale > maxZoom) {
+        const nextScale = maxZoom;
+        const nextOffset = clampOffset(canvasSize.width, canvasSize.height, nextScale, current.x, current.y);
+        return {
+          scale: nextScale,
+          x: nextOffset.x,
+          y: nextOffset.y,
+        };
+      }
+
       const nextOffset = clampOffset(canvasSize.width, canvasSize.height, current.scale, current.x, current.y);
       if (nextOffset.x === current.x && nextOffset.y === current.y) {
         return current;
@@ -4678,7 +4690,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         y: nextOffset.y,
       };
     });
-  }, [canvasSize.height, canvasSize.width]);
+  }, [canvasSize.height, canvasSize.width, maxZoom]);
 
   useEffect(() => {
     return () => {
@@ -6086,7 +6098,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
         };
       });
     },
-    [canvasSize.height, canvasSize.width]
+    [canvasSize.height, canvasSize.width, maxZoom]
   );
 
   // React delegates wheel listeners as passive at the root, so preventDefault()
@@ -6412,7 +6424,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       canvas.removeEventListener("touchend", onTouchEnd);
       canvas.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [canvasSize.height, canvasSize.width, handleCanvasDoubleTap, handleCanvasTap]);
+  }, [canvasSize.height, canvasSize.width, handleCanvasDoubleTap, handleCanvasTap, maxZoom]);
 
   const onDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLCanvasElement>) => {
