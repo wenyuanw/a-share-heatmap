@@ -51,6 +51,15 @@ pnpm dev
 
 打开 [http://localhost:3000](http://localhost:3000) 查看页面。
 
+### WebMCP 实验支持
+
+项目提供两个可被浏览器 AI 发现的 WebMCP 工具：
+
+- `list_heatmap_themes`：列出内置和已保存的热力图配色。
+- `set_heatmap_theme`：切换已有配色，或用上涨、下跌、横盘三个 Hex 颜色生成自定义配色。
+
+WebMCP 仍处于实验阶段。使用 Chrome 本地验证时，打开 `chrome://flags/#enable-webmcp-testing`，将选项设为 Enabled 并重启浏览器；也可以参加 Chrome 149 起提供的 [Origin Trial](https://developer.chrome.com/docs/ai/webmcp)。在页面中安装并打开 [WebMCP Model Context Tool Inspector](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)，即可查看和手动调用已注册工具。普通不支持 WebMCP 的浏览器会自动跳过工具注册，不影响页面使用。
+
 ## 一键部署
 
 点击上方 Vercel 按钮后，会直接基于 [wenyuanw/a-share-heatmap](https://github.com/wenyuanw/a-share-heatmap) 创建并部署项目。

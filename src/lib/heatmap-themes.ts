@@ -17,6 +17,12 @@ export type HeatTheme = {
   light: HeatStops;
 };
 
+export type HeatThemePrimaryColors = {
+  positive: HeatRgb;
+  negative: HeatRgb;
+  flat: HeatRgb;
+};
+
 export type HeatThemeExportPayload = {
   version: 1;
   type: "a-share-heatmap-theme";
@@ -286,6 +292,29 @@ export function createCustomHeatTheme(base: HeatTheme, nameZh: string, nameEn: s
     builtin: false,
     dark: normalizeHeatStops(base.dark),
     light: normalizeHeatStops(base.light),
+  };
+}
+
+export function createHeatThemeFromPrimaryColors(
+  colors: HeatThemePrimaryColors,
+  nameZh: string,
+  nameEn: string
+): HeatTheme {
+  const stops = normalizeHeatStops({
+    flat: colors.flat,
+    positiveSoft: mixRgb(colors.flat, colors.positive, 0.45),
+    positiveStrong: colors.positive,
+    negativeSoft: mixRgb(colors.flat, colors.negative, 0.45),
+    negativeStrong: colors.negative,
+  });
+
+  return {
+    id: `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    nameZh,
+    nameEn,
+    builtin: false,
+    dark: stops,
+    light: normalizeHeatStops(stops),
   };
 }
 

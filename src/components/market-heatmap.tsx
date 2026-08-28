@@ -111,6 +111,7 @@ import {
   watchlistStorageKey,
   type WatchlistItem,
 } from "@/lib/watchlist";
+import { useHeatmapWebMcp } from "@/hooks/use-heatmap-webmcp";
 
 type QuoteMap = Record<string, { price: number; changePct: number; turnoverAmount: number }>;
 
@@ -4165,6 +4166,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [inspectorSortKey, setInspectorSortKey] = useState<InspectorSortKey>("changeDesc");
   const [selectedBoardName, setSelectedBoardName] = useState<string | null>(null);
   const [selectedSubBoardName, setSelectedSubBoardName] = useState<string | null>(null);
+  useHeatmapWebMcp({
+    enabled: preferencesReady,
+    heatThemeId,
+    customHeatThemes,
+    onHeatThemeIdChange: setHeatThemeId,
+    onCustomHeatThemesChange: setCustomHeatThemes,
+  });
   const isEnglish = locale === "en";
   const isLightMode = displayMode === "light";
   const isMobile = useIsMobile();
