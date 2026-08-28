@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { createHeatmapThemeWebMcpTools } from "@/lib/heatmap-webmcp";
 import { createHeatmapViewWebMcpTools } from "@/lib/heatmap-webmcp-view";
 import { createHeatmapWatchlistWebMcpTools } from "@/lib/heatmap-webmcp-watchlist";
+import { withWebMcpErrorBoundary } from "@/lib/webmcp-tool-utils";
 import type {
   HeatmapChangeRange,
   HeatmapSizeMode,
@@ -153,7 +154,7 @@ export function useHeatmapWebMcp({
       ...createHeatmapThemeWebMcpTools(context),
       ...createHeatmapViewWebMcpTools(context),
       ...createHeatmapWatchlistWebMcpTools(context),
-    ];
+    ].map(withWebMcpErrorBoundary);
 
     void Promise.all(
       tools.map((tool) => document.modelContext!.registerTool(tool, { signal: controller.signal }))

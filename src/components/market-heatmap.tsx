@@ -14,6 +14,7 @@ import {
 } from "react";
 import {
   Camera,
+  Bot,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -222,7 +223,7 @@ type PriceColorMode = "red-rise" | "green-rise";
 type ThemeColorKey = "green" | "red" | "blue" | "violet";
 type DisplayMode = "dark" | "light";
 type FilterOpenMode = "click" | "hover";
-type SettingsTab = "appearance" | "watchlist" | "shortcuts" | "help" | "project";
+type SettingsTab = "appearance" | "watchlist" | "shortcuts" | "help" | "webmcp" | "project";
 type HeatmapSizeMode = "marketCap" | "turnover";
 
 const marketOptions: MarketKey[] = [...marketKeys];
@@ -3484,6 +3485,7 @@ function SettingsDrawer({
 }) {
   const isMobile = useIsMobile();
   const [recordingAction, setRecordingAction] = useState<ShortcutActionId | null>(null);
+  const [copiedWebmcpPrompt, setCopiedWebmcpPrompt] = useState<string | null>(null);
   const [intervalDraft, setIntervalDraft] = useState(() => String(refreshIntervalSeconds));
 
   useEffect(() => {
@@ -3506,6 +3508,19 @@ function SettingsDrawer({
     onRefreshIntervalChange(
       Math.min(maxRefreshIntervalSeconds, Math.max(minRefreshIntervalSeconds, parsed))
     );
+  };
+
+  const copyWebmcpPrompt = async (prompt: string) => {
+    try {
+      if (!navigator.clipboard) {
+        throw new Error("Clipboard API unavailable");
+      }
+      await navigator.clipboard.writeText(prompt);
+      setCopiedWebmcpPrompt(prompt);
+      window.setTimeout(() => setCopiedWebmcpPrompt((current) => (current === prompt ? null : current)), 1800);
+    } catch {
+      toast.error(messages.webmcpPromptCopyFailed, { id: "webmcp-prompt-copy" });
+    }
   };
 
   useEffect(() => {
@@ -3600,6 +3615,7 @@ function SettingsDrawer({
           { key: "help" as const, label: messages.settingsHelp, icon: Info },
         ]
       : []),
+    { key: "webmcp", label: messages.settingsWebmcp, icon: Bot },
     { key: "project", label: messages.settingsProject, icon: ExternalLink },
   ];
   const themeLabels: Record<ThemeColorKey, string> = isEnglish
@@ -4012,6 +4028,102 @@ function SettingsDrawer({
                   >
                     {messages.helpShortcutsCta}
                   </button>
+                </section>
+              </div>
+            )}
+
+            {tab === "webmcp" && (
+              <div className="space-y-5">
+                <section>
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center border border-brand/45 bg-brand/12 text-brand">
+                      <Bot className="size-4" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold">{messages.webmcpTitle}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.webmcpIntro}</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="border border-border bg-background/70 p-3.5">
+                  <h3 className="text-sm font-semibold">{messages.webmcpChatGPTTitle}</h3>
+                  <ol className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+                    {[messages.webmcpChatGPTStep1, messages.webmcpChatGPTStep2, messages.webmcpChatGPTStep3].map(
+                      (step, index) => (
+                        <li key={step} className="flex items-start gap-2">
+                          <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/15 text-[11px] font-semibold text-brand">
+                            {index + 1}
+                          </span>
+                          <span>{step}</span>
+                        </li>
+                      )
+                    )}
+                  </ol>
+                  <a
+                    href="https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand/80"
+                  >
+                    {isEnglish ? "OpenAI Site tools guide" : "OpenAI Site tools 使用说明"}
+                    <ExternalLink className="size-3" />
+                  </a>
+                </section>
+
+                <section>
+                  <h3 className="text-sm font-semibold">{isEnglish ? "Try these prompts" : "可以直接这样说"}</h3>
+                  <div className="mt-3 space-y-2">
+                    {[messages.webmcpPromptState, messages.webmcpPromptRanking, messages.webmcpPromptWatchlist, messages.webmcpPromptTheme].map(
+                      (prompt) => (
+                        <button
+                          type="button"
+                          key={prompt}
+                          onClick={() => void copyWebmcpPrompt(prompt)}
+                          title={copiedWebmcpPrompt === prompt ? messages.webmcpPromptCopied : messages.webmcpCopyPrompt}
+                          aria-label={copiedWebmcpPrompt === prompt ? messages.webmcpPromptCopied : messages.webmcpCopyPrompt}
+                          className="group flex w-full items-start justify-between gap-3 border border-border bg-muted/20 px-3 py-2.5 text-left transition-colors hover:border-brand/50 hover:bg-brand/8"
+                        >
+                          <span className="min-w-0 font-mono text-xs leading-relaxed text-foreground">{prompt}</span>
+                          <span className="inline-flex shrink-0 items-center gap-1 pt-0.5 text-[10px] font-semibold text-muted-foreground group-hover:text-brand">
+                            {copiedWebmcpPrompt === prompt ? <Check className="size-3" /> : <Copy className="size-3" />}
+                            {copiedWebmcpPrompt === prompt ? messages.webmcpPromptCopied : messages.webmcpCopyPrompt}
+                          </span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div className="border border-border bg-background/70 p-3.5">
+                    <h3 className="text-sm font-semibold">{messages.webmcpChromeTitle}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.webmcpChromeDescription}</p>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                      <a
+                        href="https://developer.chrome.com/docs/ai/webmcp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand/80"
+                      >
+                        {messages.webmcpChromeDocsLink}
+                        <ExternalLink className="size-3" />
+                      </a>
+                      <a
+                        href="https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand/80"
+                      >
+                        {messages.webmcpInspectorLink}
+                        <ExternalLink className="size-3" />
+                      </a>
+                    </div>
+                  </div>
+                  <div className="border border-dashed border-border bg-muted/15 p-3.5">
+                    <h3 className="text-sm font-semibold">{messages.webmcpBrowserTitle}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.webmcpBrowserDescription}</p>
+                  </div>
                 </section>
               </div>
             )}

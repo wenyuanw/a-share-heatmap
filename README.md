@@ -67,7 +67,38 @@ pnpm dev
 - `add_to_watchlist`、`remove_from_watchlist`：添加或移除本地自选股。
 - `clear_watchlist`：清空自选股，必须显式传入 `confirm: true`。
 
-WebMCP 仍处于实验阶段。使用 Chrome 本地验证时，打开 `chrome://flags/#enable-webmcp-testing`，将选项设为 Enabled 并重启浏览器；也可以参加 Chrome 149 起提供的 [Origin Trial](https://developer.chrome.com/docs/ai/webmcp)。在页面中安装并打开 [WebMCP Model Context Tool Inspector](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)，即可查看和手动调用已注册工具。普通不支持 WebMCP 的浏览器会自动跳过工具注册，不影响页面使用。
+#### 使用 ChatGPT 桌面版内置浏览器
+
+ChatGPT 桌面版的内置浏览器支持通过 Site tools 使用网页提供的 WebMCP 工具，不需要安装额外扩展。具体是否出现 Site tools 入口，取决于账号、工作区和当前模型是否已获得支持；可参考 [OpenAI Site tools 使用说明](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app)。
+
+1. 将 ChatGPT 桌面版更新到最新版，在 Work 或 Codex 中打开一个支持 Site tools 的对话。
+2. 从 ChatGPT 工具栏打开内置浏览器，访问本页面。
+3. 如果 ChatGPT 请求网页访问权限，允许使用 Site tools；地址栏出现 Site tools 指示后，在同一个对话中直接提出需求。
+4. 观察页面和对话结果。地址栏中的 Site tools 菜单可以查看可用工具及最近使用的工具。
+
+可以直接测试：
+
+```text
+请使用当前页面提供的 Site tools 读取热力图状态，告诉我当前市场范围、涨跌周期、筛选条件和市场概览。不要使用普通点击操作。
+```
+
+```text
+请使用当前页面提供的 Site tools 切换到沪深 300，设置为近 20 日，并列出涨幅最大的 10 只股票。
+```
+
+```text
+请使用当前页面的 Site tools 搜索宁德时代，把准确的股票加入我的自选股，然后读取自选股。不要清空自选股。
+```
+
+```text
+请使用当前页面的 Site tools 创建并应用一个赛博朋克风格的热力图主题：上涨 #00e5ff，下跌 #ff2bd6，横盘 #7c3aed。
+```
+
+#### 使用 Chrome 和 Inspector 调试
+
+WebMCP 仍处于实验阶段。开发测试时，可以打开 `chrome://flags/#enable-webmcp-testing`，将选项设为 Enabled 并重启 Chrome；也可以参加 Chrome 149 起提供的 [Origin Trial](https://developer.chrome.com/docs/ai/webmcp)。完整的 API 与实验说明可参考 [Chrome WebMCP 官方文档](https://developer.chrome.com/docs/ai/webmcp)。在页面中安装并打开 [WebMCP Model Context Tool Inspector](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)，即可查看和手动调用已注册工具。这是 WebMCP 的调试路径，不等同于 ChatGPT 桌面版内置浏览器的 Site tools 调用。
+
+普通不支持 WebMCP 的浏览器会自动跳过工具注册，不影响页面原有功能；但普通浏览器本身不会替 ChatGPT 完成真实的 Site tools 调用。
 
 ## 一键部署
 

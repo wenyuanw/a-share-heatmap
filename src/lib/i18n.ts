@@ -207,6 +207,33 @@ export const messages = {
       settingsAppearance: "Appearance",
       settingsWatchlist: "Watchlist",
       settingsWatchlistIntro: "Add stocks by name or code to build a personal heatmap.",
+      settingsWebmcp: "WebMCP",
+      webmcpTitle: "Use this page with AI",
+      webmcpIntro:
+        "This page exposes WebMCP tools so a compatible AI agent can read the heatmap, change the view, inspect rankings, and manage your local watchlist.",
+      webmcpChatGPTTitle: "Test with ChatGPT desktop built-in browser",
+      webmcpChatGPTStep1: "Open the latest ChatGPT desktop app and start a supported Work or Codex conversation.",
+      webmcpChatGPTStep2: "Open the built-in browser, visit this page, and enable site tools if ChatGPT asks for permission.",
+      webmcpChatGPTStep3: "When the address bar shows the site-tools indicator, ask ChatGPT to use the current page's Site tools.",
+      webmcpPromptState:
+        "Use the Site tools provided by the current page to read the heatmap state, then tell me the market, period, filters, and market summary. Do not use ordinary clicks.",
+      webmcpPromptRanking:
+        "Use the Site tools provided by the current page to switch to CSI 300, use the last 20 trading days, and list the 10 stocks with the largest gains.",
+      webmcpPromptWatchlist:
+        "Use the current page's Site tools to search for 宁德时代, add the exact stock to my watchlist, and then read the watchlist. Do not clear it.",
+      webmcpPromptTheme:
+        "Use the current page's Site tools to create and apply a cyberpunk heatmap theme: rising #00e5ff, falling #ff2bd6, flat #7c3aed.",
+      webmcpCopyPrompt: "Copy prompt",
+      webmcpPromptCopied: "Copied",
+      webmcpPromptCopyFailed: "Unable to copy prompt",
+      webmcpChromeTitle: "Chrome and Inspector testing",
+      webmcpChromeDescription:
+        "For development testing, enable Chrome's WebMCP flag and use the WebMCP Model Context Tool Inspector to inspect or call the registered tools. This is a debugging path, not ChatGPT's built-in Site tools flow.",
+      webmcpInspectorLink: "Open WebMCP Model Context Tool Inspector",
+      webmcpChromeDocsLink: "Read Chrome WebMCP documentation",
+      webmcpBrowserTitle: "If no tool appears",
+      webmcpBrowserDescription:
+        "Site tools depend on your ChatGPT account, workspace, selected model, and the page being open in the built-in browser. A normal browser without WebMCP support continues to work, but it cannot perform a real AI tool call.",
       settingsLanguage: "Language",
       settingsShortcuts: "Shortcuts",
       settingsShortcutsIntro: "Click a row, then press a new key. Esc cancels. Escape itself cannot be remapped.",
@@ -504,6 +531,33 @@ export const messages = {
       settingsAppearance: "外观",
       settingsWatchlist: "自选",
       settingsWatchlistIntro: "通过股票名称或代码添加，生成你的专属热力图。",
+      settingsWebmcp: "WebMCP",
+      webmcpTitle: "让 AI 操作当前页面",
+      webmcpIntro:
+        "本页面提供了一组 WebMCP 工具，兼容的 AI Agent 可以读取热力图、切换视图、查询排行，并管理保存在本机浏览器中的自选股。",
+      webmcpChatGPTTitle: "使用 ChatGPT 桌面版内置浏览器测试",
+      webmcpChatGPTStep1: "打开最新版 ChatGPT 桌面版，并创建支持 Site tools 的 Work 或 Codex 对话。",
+      webmcpChatGPTStep2: "打开 ChatGPT 内置浏览器，访问当前页面；如果出现权限提示，允许使用 Site tools。",
+      webmcpChatGPTStep3: "地址栏出现 Site tools 指示图标后，在同一个对话中要求 ChatGPT 使用当前页面提供的 Site tools。",
+      webmcpPromptState:
+        "请使用当前页面提供的 Site tools 读取热力图状态，然后告诉我当前市场范围、周期、筛选条件和市场概览。不要使用普通点击操作。",
+      webmcpPromptRanking:
+        "请使用当前页面提供的 Site tools 切换到沪深 300，设置为近 20 日，并列出涨幅最大的 10 只股票。",
+      webmcpPromptWatchlist:
+        "请使用当前页面的 Site tools 搜索宁德时代，把准确的股票加入我的自选股，然后读取自选股。不要清空自选股。",
+      webmcpPromptTheme:
+        "请使用当前页面的 Site tools 创建并应用一个赛博朋克风格的热力图主题：上涨 #00e5ff，下跌 #ff2bd6，横盘 #7c3aed。",
+      webmcpCopyPrompt: "复制提示词",
+      webmcpPromptCopied: "已复制",
+      webmcpPromptCopyFailed: "提示词复制失败",
+      webmcpChromeTitle: "使用 Chrome 和 Inspector 调试",
+      webmcpChromeDescription:
+        "开发测试时，可以开启 Chrome 的 WebMCP flag，再使用 WebMCP Model Context Tool Inspector 查看或调用已注册工具。这是调试路径，不是 ChatGPT 内置 Site tools 的使用流程。",
+      webmcpInspectorLink: "打开 WebMCP Model Context Tool Inspector",
+      webmcpChromeDocsLink: "查看 Chrome WebMCP 官方文档",
+      webmcpBrowserTitle: "如果看不到工具",
+      webmcpBrowserDescription:
+        "Site tools 是否出现取决于 ChatGPT 账号、工作区、当前模型，以及页面是否在 ChatGPT 内置浏览器中打开。不支持 WebMCP 的普通浏览器仍可正常使用网页，但不能完成真实的 AI 工具调用。",
       settingsLanguage: "语言",
       settingsShortcuts: "快捷键",
       settingsShortcutsIntro: "点击一项后按下新按键即可绑定。Esc 取消录制；Esc 本身不可重映射。",
