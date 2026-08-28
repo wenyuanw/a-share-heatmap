@@ -118,6 +118,8 @@ export const messages = {
       legendFlat: "Flat",
       legendFall: "Falling",
       dataNote: "Data source: Eastmoney real-time snapshot (cached for a few seconds).",
+      refreshData: "Refresh data",
+      refreshDataHint: "The previous heatmap is still shown. Try refreshing again.",
       loading: "Loading heatmap...",
       loadingTipLabel: "Market tip",
       loadingTips: [
@@ -414,6 +416,8 @@ export const messages = {
       legendFlat: "平盘",
       legendFall: "下跌",
       dataNote: "数据来源：东方财富实时快照（秒级缓存）。",
+      refreshData: "刷新数据",
+      refreshDataHint: "当前仍展示上一次热力图数据，可点击刷新重试。",
       loading: "热力图加载中...",
       loadingTipLabel: "市场小贴士",
       loadingTips: [

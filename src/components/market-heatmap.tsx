@@ -4131,6 +4131,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [initialSnapshot] = useState<TreemapResponse | null>(() => getBundledSnapshotTreemap());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [updatedAt, setUpdatedAt] = useState("");
   // Set once the Canvas has painted the bundled sample — from then on the sample
   // stays visible instead of being masked by the full-screen loading overlay.
@@ -4671,6 +4672,11 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     };
   }, []);
 
+  const retryDataLoad = useCallback(() => {
+    setError(null);
+    setRefreshRequestId((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     if (inspectorListRef.current) {
       inspectorListRef.current.scrollTop = 0;
@@ -4800,7 +4806,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
     return () => {
       cancelled = true;
     };
-  }, [fetchTreemap, market, messages.errorLoad, period, preferencesReady, watchlistCodes]);
+  }, [fetchTreemap, market, messages.errorLoad, period, preferencesReady, refreshRequestId, watchlistCodes]);
 
   usePollWhileVisible(
     useCallback(async () => {
@@ -7675,9 +7681,30 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               </div>
             )}
 
-            {error && !loading && (
-              <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80 text-sm text-destructive backdrop-blur-sm">
-                {error}
+            {error && (
+              <div
+                className={cn(
+                  "absolute inset-x-3 top-3 z-40 flex items-center justify-between gap-3 border px-3 py-2.5 text-sm shadow-lg backdrop-blur-md sm:left-4 sm:right-4 sm:top-4",
+                  isLightMode
+                    ? "border-amber-200 bg-white/94 text-slate-800"
+                    : "border-amber-400/30 bg-[#17130d]/92 text-slate-100"
+                )}
+                role="alert"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-amber-700 dark:text-amber-300">{error}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{messages.refreshDataHint}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-border bg-background/80 text-foreground hover:bg-muted"
+                  onClick={retryDataLoad}
+                  disabled={loading}
+                >
+                  <RotateCcw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
+                  {loading ? messages.updating : messages.refreshData}
+                </Button>
               </div>
             )}
 
