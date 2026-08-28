@@ -11,6 +11,7 @@ interface WebMcpToolDefinition {
   inputSchema?: WebMcpJsonSchema;
   annotations?: {
     readOnlyHint?: boolean;
+    destructiveHint?: boolean;
     untrustedContentHint?: boolean;
   };
   execute: (

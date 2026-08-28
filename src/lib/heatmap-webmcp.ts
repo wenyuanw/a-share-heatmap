@@ -3,27 +3,15 @@ import {
   createHeatThemeFromPrimaryColors,
   parseHexColor,
   rgbToHex,
-  type HeatTheme,
 } from "@/lib/heatmap-themes";
+import type { HeatmapWebMcpContext } from "@/lib/heatmap-webmcp-types";
 
-export type HeatmapWebMcpStateRef = {
-  current: {
-    heatThemeId: string;
-    customHeatThemes: HeatTheme[];
-  };
-};
-
-export type HeatmapWebMcpActions = {
-  selectTheme: (theme: HeatTheme) => void;
-  createTheme: (theme: HeatTheme) => void;
-};
-
-function getAvailableThemes(stateRef: HeatmapWebMcpStateRef) {
-  return [...builtinHeatThemes, ...stateRef.current.customHeatThemes];
+function getAvailableThemes(context: HeatmapWebMcpContext) {
+  return [...builtinHeatThemes, ...context.stateRef.current.customHeatThemes];
 }
 
-function getThemeSummary(stateRef: HeatmapWebMcpStateRef) {
-  return getAvailableThemes(stateRef).map((theme) => ({
+function getThemeSummary(context: HeatmapWebMcpContext) {
+  return getAvailableThemes(context).map((theme) => ({
     id: theme.id,
     nameZh: theme.nameZh,
     nameEn: theme.nameEn,
@@ -31,10 +19,7 @@ function getThemeSummary(stateRef: HeatmapWebMcpStateRef) {
   }));
 }
 
-export function createHeatmapWebMcpTools(
-  stateRef: HeatmapWebMcpStateRef,
-  actions: HeatmapWebMcpActions
-): [WebMcpToolDefinition, WebMcpToolDefinition] {
+export function createHeatmapThemeWebMcpTools(context: HeatmapWebMcpContext): WebMcpToolDefinition[] {
   const listThemesTool: WebMcpToolDefinition = {
     name: "list_heatmap_themes",
     title: "List heatmap color themes",
@@ -50,8 +35,8 @@ export function createHeatmapWebMcpTools(
       untrustedContentHint: false,
     },
     execute: async () => ({
-      activeThemeId: stateRef.current.heatThemeId,
-      themes: getThemeSummary(stateRef),
+      activeThemeId: context.stateRef.current.heatThemeId,
+      themes: getThemeSummary(context),
     }),
   };
 
@@ -114,15 +99,15 @@ export function createHeatmapWebMcpTools(
         }
 
         const requestedId = input.themeId.trim();
-        const theme = getAvailableThemes(stateRef).find((candidate) => candidate.id === requestedId);
+        const theme = getAvailableThemes(context).find((candidate) => candidate.id === requestedId);
         if (!theme) {
-          const availableIds = getAvailableThemes(stateRef)
+          const availableIds = getAvailableThemes(context)
             .map((candidate) => candidate.id)
             .join(", ");
           throw new Error(`Unknown themeId "${requestedId}". Available theme IDs: ${availableIds}.`);
         }
 
-        actions.selectTheme(theme);
+        context.actionsRef.current.selectTheme(theme);
         return {
           success: true,
           action: "selected",
@@ -146,7 +131,7 @@ export function createHeatmapWebMcpTools(
         throw new Error("Each color must be a six-digit hexadecimal value such as #ef4444.");
       }
 
-      const customThemeNumber = stateRef.current.customHeatThemes.length + 1;
+      const customThemeNumber = context.stateRef.current.customHeatThemes.length + 1;
       const theme = createHeatThemeFromPrimaryColors(
         {
           positive: parsedColors[0]!,
@@ -156,7 +141,7 @@ export function createHeatmapWebMcpTools(
         `AI 自定义 ${customThemeNumber}`,
         `AI Custom ${customThemeNumber}`
       );
-      actions.createTheme(theme);
+      context.actionsRef.current.createTheme(theme);
 
       return {
         success: true,

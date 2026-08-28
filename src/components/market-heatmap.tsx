@@ -4166,13 +4166,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const [inspectorSortKey, setInspectorSortKey] = useState<InspectorSortKey>("changeDesc");
   const [selectedBoardName, setSelectedBoardName] = useState<string | null>(null);
   const [selectedSubBoardName, setSelectedSubBoardName] = useState<string | null>(null);
-  useHeatmapWebMcp({
-    enabled: preferencesReady,
-    heatThemeId,
-    customHeatThemes,
-    onHeatThemeIdChange: setHeatThemeId,
-    onCustomHeatThemesChange: setCustomHeatThemes,
-  });
   const isEnglish = locale === "en";
   const isLightMode = displayMode === "light";
   const isMobile = useIsMobile();
@@ -6683,6 +6676,56 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       setSharePending(false);
     }
   }, [canvasSize.width, isLightMode, market, messages, period, updatedAt]);
+
+  useHeatmapWebMcp({
+    enabled: preferencesReady,
+    market,
+    period,
+    boardFilter,
+    trendFilter:
+      trendFilter === risingOnlyValue ? "rising" : trendFilter === fallingOnlyValue ? "falling" : "all",
+    changeRangeFilter,
+    sizeMode,
+    thumbnailMode,
+    headerTrendStats,
+    refreshIntervalSeconds,
+    heatThemeId,
+    customHeatThemes,
+    watchlist,
+    treemapData,
+    visibleTreemapData,
+    quotes,
+    marketSummaries,
+    dataSource,
+    updatedAt,
+    loading,
+    error,
+    view,
+    selectedStockCode,
+    selectedBoardName,
+    selectedSubBoardName,
+    onHeatThemeIdChange: setHeatThemeId,
+    onCustomHeatThemesChange: setCustomHeatThemes,
+    onMarketChange: setMarket,
+    onPeriodChange: setPeriod,
+    onBoardFilterChange: setBoardFilter,
+    onTrendFilterChange: (filter) => {
+      setTrendFilter(filter === "rising" ? risingOnlyValue : filter === "falling" ? fallingOnlyValue : allTrendsValue);
+    },
+    onChangeRangeFilterChange: applyChangeRange,
+    onSizeModeChange: setSizeMode,
+    onThumbnailModeChange: setThumbnailMode,
+    onViewChange: setView,
+    onSelectStock: setSelectedStockCode,
+    onSelectBoard: setSelectedBoardName,
+    onSelectSubBoard: setSelectedSubBoardName,
+    onRetryDataLoad: retryDataLoad,
+    onResetView: resetView,
+    onCreateSharePreview: createSharePreview,
+    onAddWatchlistItem: addWatchlistItem,
+    onRemoveWatchlistItem: removeWatchlistItem,
+    onClearWatchlist: clearWatchlist,
+  });
 
   const downloadSharePreview = useCallback(() => {
     if (!sharePreview) {

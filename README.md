@@ -53,10 +53,19 @@ pnpm dev
 
 ### WebMCP 实验支持
 
-项目提供两个可被浏览器 AI 发现的 WebMCP 工具：
+项目提供一组可被浏览器 AI 发现的 WebMCP 工具：
 
 - `list_heatmap_themes`：列出内置和已保存的热力图配色。
 - `set_heatmap_theme`：切换已有配色，或用上涨、下跌、横盘三个 Hex 颜色生成自定义配色。
+- `get_heatmap_state`：读取当前市场、周期、筛选、视图、选中项和行情摘要。
+- `set_heatmap_view`：切换市场范围、涨跌周期、面积指标和缩略图模式。
+- `set_heatmap_filters`：设置板块、上涨/下跌和涨跌幅区间筛选。
+- `get_top_stocks`：按涨跌幅、成交额或市值面积查看当前热力图中的个股排行。
+- `get_board_rankings`：按加权涨跌幅、成交额、市值面积或股票数量查看板块排行。
+- `search_stocks`：按名称或代码搜索股票，适合先发现准确代码。
+- `get_watchlist`：读取本地自选股，并尽量附带最新行情。
+- `add_to_watchlist`、`remove_from_watchlist`：添加或移除本地自选股。
+- `clear_watchlist`：清空自选股，必须显式传入 `confirm: true`。
 
 WebMCP 仍处于实验阶段。使用 Chrome 本地验证时，打开 `chrome://flags/#enable-webmcp-testing`，将选项设为 Enabled 并重启浏览器；也可以参加 Chrome 149 起提供的 [Origin Trial](https://developer.chrome.com/docs/ai/webmcp)。在页面中安装并打开 [WebMCP Model Context Tool Inspector](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)，即可查看和手动调用已注册工具。普通不支持 WebMCP 的浏览器会自动跳过工具注册，不影响页面使用。
 
