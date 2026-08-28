@@ -2833,17 +2833,33 @@ function filterChipClass(active: boolean) {
   );
 }
 
+function getViewportSize() {
+  const visual = typeof window !== "undefined" ? window.visualViewport : null;
+  return {
+    width: visual?.width ?? window.innerWidth,
+    height: visual?.height ?? window.innerHeight,
+    offsetLeft: visual?.offsetLeft ?? 0,
+    offsetTop: visual?.offsetTop ?? 0,
+  };
+}
+
 function FilterPopover({
   open,
+  isMobile,
+  closeLabel,
   triggerRefs,
   layoutKey,
+  onClose,
   onMouseEnter,
   onMouseLeave,
   children,
 }: {
   open: boolean;
+  isMobile: boolean;
+  closeLabel: string;
   triggerRefs: Array<RefObject<HTMLButtonElement | null>>;
   layoutKey: string;
+  onClose: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   children: ReactNode;
@@ -2853,11 +2869,12 @@ function FilterPopover({
     left: 12,
     top: 12,
     width: 340,
+    maxHeight: "calc(100dvh - 16px)",
     zIndex: 80,
   });
 
   useLayoutEffect(() => {
-    if (!open) {
+    if (!open || isMobile) {
       return;
     }
 
@@ -2871,23 +2888,29 @@ function FilterPopover({
           const rect = node.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         });
-      const width = Math.min(340, window.innerWidth - 16);
-      let left = 12;
-      let top = 12;
+      const viewport = getViewportSize();
+      const margin = 8;
+      const width = Math.min(340, viewport.width - margin * 2);
+      let left = viewport.offsetLeft + margin;
+      let top = viewport.offsetTop + margin;
 
       if (trigger) {
         const rect = trigger.getBoundingClientRect();
         left = rect.right + 8;
         top = rect.top;
-        if (left + width > window.innerWidth - 8) {
-          left = Math.max(8, rect.left);
+        if (left + width > viewport.offsetLeft + viewport.width - margin) {
+          left = Math.min(
+            Math.max(viewport.offsetLeft + margin, rect.left),
+            viewport.offsetLeft + viewport.width - width - margin
+          );
           top = rect.bottom + 8;
         }
       }
 
-      const maxHeight = window.innerHeight - 16;
-      if (top + maxHeight > window.innerHeight - 8) {
-        top = Math.max(8, window.innerHeight - maxHeight - 8);
+      const maxBottom = viewport.offsetTop + viewport.height - margin;
+      const maxHeight = Math.max(240, maxBottom - top);
+      if (top + 240 > maxBottom) {
+        top = Math.max(viewport.offsetTop + margin, maxBottom - maxHeight);
       }
 
       setStyle({
@@ -2895,6 +2918,8 @@ function FilterPopover({
         left,
         top,
         width,
+        height: maxHeight,
+        maxHeight,
         zIndex: 80,
       });
     };
@@ -2903,21 +2928,42 @@ function FilterPopover({
     const frame = window.requestAnimationFrame(update);
     const timer = window.setTimeout(update, 320);
     window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
     document.addEventListener("scroll", update, true);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
       window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
       document.removeEventListener("scroll", update, true);
     };
-  }, [layoutKey, open, triggerRefs]);
+  }, [isMobile, layoutKey, open, triggerRefs]);
 
   if (!open || typeof document === "undefined") {
     return null;
   }
 
+  if (isMobile) {
+    return createPortal(
+      <div className="fixed inset-0 z-[10010] flex flex-col justify-end" role="presentation">
+        <button
+          type="button"
+          aria-label={closeLabel}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/62 backdrop-blur-sm"
+        />
+        <div className="relative flex h-[min(92dvh,100%)] max-h-[92dvh] w-full flex-col pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
-    <div style={style} className="max-h-[calc(100vh-16px)]" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div style={style} className="flex flex-col overflow-hidden" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {children}
     </div>,
     document.body
@@ -2925,6 +2971,7 @@ function FilterPopover({
 }
 
 function FilterPanel({
+  layout = "popover",
   messages,
   locale,
   shortcutLabel,
@@ -2953,6 +3000,7 @@ function FilterPanel({
   onPeriodChange,
   onResetFilters,
 }: {
+  layout?: "popover" | "sheet";
   messages: HeatmapMessages;
   locale: Locale;
   shortcutLabel: string;
@@ -2986,6 +3034,10 @@ function FilterPanel({
   const selectedBoardCountLabel = messages.selectedBoardCount.replace("{count}", String(boardFilter.length));
 
   useEffect(() => {
+    if (layout === "sheet") {
+      return;
+    }
+
     function onPointerDown(event: PointerEvent) {
       const target = event.target as HTMLElement | null;
       if (!target) {
@@ -3001,15 +3053,26 @@ function FilterPanel({
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [onClose]);
+  }, [layout, onClose]);
 
   return (
     <section
       ref={panelRef}
       role="dialog"
       aria-labelledby="heatmap-filters-title"
-      className="flex max-h-[calc(100vh-16px)] w-full flex-col overflow-hidden border border-border bg-card/96 text-card-foreground shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-sm"
+      aria-modal={layout === "sheet" ? true : undefined}
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col overflow-hidden border border-border bg-card/96 text-card-foreground backdrop-blur-sm",
+        layout === "sheet"
+          ? "rounded-t-lg border-b-0 shadow-[0_-24px_100px_rgba(0,0,0,0.48)]"
+          : "shadow-[0_18px_48px_rgba(0,0,0,0.28)]"
+      )}
     >
+      {layout === "sheet" && (
+        <div className="flex items-center justify-center pt-2">
+          <span className="h-1 w-10 rounded-full bg-muted-foreground/40" aria-hidden />
+        </div>
+      )}
       <header className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <ListFilter className="size-3.5 shrink-0 text-muted-foreground" />
@@ -7832,12 +7895,16 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
 
       <FilterPopover
         open={filtersOpen}
+        isMobile={isMobile}
+        closeLabel={messages.closeSheet}
         triggerRefs={filterTriggerRefs}
         layoutKey={`${sidebarOpen}:${desktopSidebarCollapsed}:${isFullscreen}:${isMobile}`}
+        onClose={closeFilters}
         onMouseEnter={handleFilterHoverEnter}
         onMouseLeave={handleFilterHoverLeave}
       >
         <FilterPanel
+          layout={isMobile ? "sheet" : "popover"}
           messages={messages}
           locale={locale}
           shortcutLabel={formatShortcutLabel(shortcutBindings.filters)}
