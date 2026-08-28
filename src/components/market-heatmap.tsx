@@ -3074,13 +3074,15 @@ function FilterPanel({
           <span className="h-1 w-10 rounded-full bg-muted-foreground/40" aria-hidden />
         </div>
       )}
-      <header className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-2">
+      <header className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-2.5 sm:py-2">
         <div className="flex min-w-0 items-center gap-2">
           <ListFilter className="size-3.5 shrink-0 text-muted-foreground" />
           <h2 id="heatmap-filters-title" className="text-[13px] font-semibold leading-none">
             {messages.filtersTitle}
           </h2>
-          <span className="font-mono text-[10px] font-semibold text-muted-foreground">{shortcutLabel}</span>
+          {layout !== "sheet" && (
+            <span className="font-mono text-[10px] font-semibold text-muted-foreground">{shortcutLabel}</span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {activeFilterCount > 0 && (
@@ -3103,7 +3105,12 @@ function FilterPanel({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-2.5">
+      <div
+        className={cn(
+          "min-h-0 flex-1 space-y-3.5 overflow-y-auto p-2.5",
+          layout === "sheet" && "space-y-4 overscroll-contain"
+        )}
+      >
         <section>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <h3 className="text-[11px] font-semibold text-muted-foreground">{messages.boardFilterLabel}</h3>
@@ -3130,7 +3137,12 @@ function FilterPanel({
             >
               {isAllBoardsSelected ? messages.allBoards : selectedBoardCountLabel}
             </button>
-            <div className="max-h-40 overflow-y-auto overscroll-contain border-t border-border">
+            <div
+              className={cn(
+                "overflow-y-auto overscroll-contain border-t border-border",
+                layout === "sheet" ? "max-h-48" : "max-h-40"
+              )}
+            >
               {boards.map((board) => {
                 const isSelected = boardFilter.includes(board.name);
                 return (
@@ -3165,61 +3177,63 @@ function FilterPanel({
           </div>
         </section>
 
-        <section>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <h3 className="text-[11px] font-semibold text-muted-foreground">{messages.metricLabel}</h3>
-            <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
-              {getPeriodLabel(messages, period)}
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-1">
-            {periodOptions.map((option) => {
-              const isActive = period === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => onPeriodChange(option)}
-                  title={getPeriodLabel(messages, option)}
-                  aria-pressed={isActive}
-                  className={filterChipClass(isActive)}
-                >
-                  {getCompactPeriodLabel(option, locale)}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <div className={layout === "sheet" ? "grid grid-cols-2 gap-3" : "space-y-3.5"}>
+          <section>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <h3 className="text-[11px] font-semibold text-muted-foreground">{messages.metricLabel}</h3>
+              <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
+                {getPeriodLabel(messages, period)}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {periodOptions.map((option) => {
+                const isActive = period === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => onPeriodChange(option)}
+                    title={getPeriodLabel(messages, option)}
+                    aria-pressed={isActive}
+                    className={filterChipClass(isActive)}
+                  >
+                    {getCompactPeriodLabel(option, locale)}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-        <section>
-          <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.trendFilterLabel}</h3>
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              type="button"
-              onClick={() => onTrendFilterChange(allTrendsValue)}
-              aria-pressed={trendFilter === allTrendsValue}
-              className={filterChipClass(trendFilter === allTrendsValue)}
-            >
-              {messages.allTrends}
-            </button>
-            <button
-              type="button"
-              onClick={() => onTrendFilterChange(risingOnlyValue)}
-              aria-pressed={trendFilter === risingOnlyValue}
-              className={filterChipClass(trendFilter === risingOnlyValue)}
-            >
-              {messages.risingOnly}
-            </button>
-            <button
-              type="button"
-              onClick={() => onTrendFilterChange(fallingOnlyValue)}
-              aria-pressed={trendFilter === fallingOnlyValue}
-              className={filterChipClass(trendFilter === fallingOnlyValue)}
-            >
-              {messages.fallingOnly}
-            </button>
-          </div>
-        </section>
+          <section>
+            <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.trendFilterLabel}</h3>
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={() => onTrendFilterChange(allTrendsValue)}
+                aria-pressed={trendFilter === allTrendsValue}
+                className={filterChipClass(trendFilter === allTrendsValue)}
+              >
+                {messages.allTrends}
+              </button>
+              <button
+                type="button"
+                onClick={() => onTrendFilterChange(risingOnlyValue)}
+                aria-pressed={trendFilter === risingOnlyValue}
+                className={filterChipClass(trendFilter === risingOnlyValue)}
+              >
+                {messages.risingOnly}
+              </button>
+              <button
+                type="button"
+                onClick={() => onTrendFilterChange(fallingOnlyValue)}
+                aria-pressed={trendFilter === fallingOnlyValue}
+                className={filterChipClass(trendFilter === fallingOnlyValue)}
+              >
+                {messages.fallingOnly}
+              </button>
+            </div>
+          </section>
+        </div>
 
         <section>
           <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -3317,50 +3331,72 @@ function FilterPanel({
           </div>
         </section>
 
-        <section>
-          <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.sizeModeLabel}</h3>
-          <div className="grid grid-cols-2 gap-1">
-            <button
-              type="button"
-              onClick={() => onSizeModeChange("marketCap")}
-              aria-pressed={sizeMode === "marketCap"}
-              className={filterChipClass(sizeMode === "marketCap")}
-            >
-              {messages.sizeModeMarketCap}
-            </button>
-            <button
-              type="button"
-              onClick={() => onSizeModeChange("turnover")}
-              aria-pressed={sizeMode === "turnover"}
-              className={filterChipClass(sizeMode === "turnover")}
-            >
-              {messages.sizeModeTurnover}
-            </button>
-          </div>
-        </section>
+        <div className={layout === "sheet" ? "grid grid-cols-2 gap-3" : "space-y-3.5"}>
+          <section>
+            <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.sizeModeLabel}</h3>
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => onSizeModeChange("marketCap")}
+                aria-pressed={sizeMode === "marketCap"}
+                className={filterChipClass(sizeMode === "marketCap")}
+              >
+                {messages.sizeModeMarketCap}
+              </button>
+              <button
+                type="button"
+                onClick={() => onSizeModeChange("turnover")}
+                aria-pressed={sizeMode === "turnover"}
+                className={filterChipClass(sizeMode === "turnover")}
+              >
+                {messages.sizeModeTurnover}
+              </button>
+            </div>
+          </section>
 
-        <section>
-          <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.thumbnailModeLabel}</h3>
-          <div className="grid grid-cols-2 gap-1">
-            <button
-              type="button"
-              onClick={() => onThumbnailModeChange(false)}
-              aria-pressed={!thumbnailMode}
-              className={filterChipClass(!thumbnailMode)}
-            >
-              {messages.thumbnailModeOff}
-            </button>
-            <button
-              type="button"
-              onClick={() => onThumbnailModeChange(true)}
-              aria-pressed={thumbnailMode}
-              className={filterChipClass(thumbnailMode)}
-            >
-              {messages.thumbnailModeOn}
-            </button>
-          </div>
-        </section>
+          <section>
+            <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{messages.thumbnailModeLabel}</h3>
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => onThumbnailModeChange(false)}
+                aria-pressed={!thumbnailMode}
+                className={filterChipClass(!thumbnailMode)}
+              >
+                {messages.thumbnailModeOff}
+              </button>
+              <button
+                type="button"
+                onClick={() => onThumbnailModeChange(true)}
+                aria-pressed={thumbnailMode}
+                className={filterChipClass(thumbnailMode)}
+              >
+                {messages.thumbnailModeOn}
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
+
+      {layout === "sheet" && (
+        <footer className="flex shrink-0 gap-2 border-t border-border bg-card/98 p-2.5">
+          <button
+            type="button"
+            onClick={onResetFilters}
+            disabled={activeFilterCount === 0}
+            className="h-10 flex-1 border border-border bg-background/80 px-3 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {messages.filtersReset}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 flex-[1.35] bg-brand px-3 text-[12px] font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+          >
+            {messages.closeSheet}
+          </button>
+        </footer>
+      )}
     </section>
   );
 }
@@ -4855,7 +4891,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
   const openFilters = useCallback(() => {
     setSettingsOpen(false);
     if (isMobile) {
-      setSidebarOpen(true);
+      setSidebarOpen(false);
     }
     setFiltersOpen(true);
   }, [isMobile]);
@@ -4867,7 +4903,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
       if (next) {
         setSettingsOpen(false);
         if (isMobile) {
-          setSidebarOpen(true);
+          setSidebarOpen(false);
         }
       }
       return next;
@@ -7740,7 +7776,55 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messa
               </div>
 
               <div className="flex min-w-0 flex-1 justify-center overflow-hidden px-0.5 sm:px-2">
-                <div className="flex w-full min-w-0 max-w-52 items-center gap-1 sm:gap-1.5 md:max-w-56">
+                <div className="flex items-center gap-1 md:hidden">
+                  <button
+                    type="button"
+                    onClick={toggleFilters}
+                    aria-label={messages.filtersOpen}
+                    aria-pressed={filtersOpen}
+                    title={messages.filtersOpen}
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      filtersOpen || activeFilterCount > 0
+                        ? "text-brand hover:bg-brand/12 focus-visible:bg-brand/12"
+                        : isLightMode
+                          ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
+                          : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
+                    )}
+                  >
+                    <ListFilter className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetView}
+                    aria-label={messages.resetView}
+                    title={messages.resetView}
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      isLightMode
+                        ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
+                        : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
+                    )}
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    aria-label={messages.enterFullscreen}
+                    title={messages.enterFullscreen}
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      isLightMode
+                        ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
+                        : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
+                    )}
+                  >
+                    <Maximize2 className="size-3.5" />
+                  </button>
+                </div>
+
+                <div className="hidden w-full min-w-0 max-w-52 items-center gap-1 sm:gap-1.5 md:flex md:max-w-56">
                   <TrendingDown
                     className="size-2.5 shrink-0 sm:size-3"
                     style={{ color: fallTextColor }}
