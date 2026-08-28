@@ -2865,6 +2865,7 @@ function FilterPopover({
   onMouseLeave?: () => void;
   children: ReactNode;
 }) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const [style, setStyle] = useState<CSSProperties>({
     position: "fixed",
     left: 12,
@@ -2892,6 +2893,12 @@ function FilterPopover({
       const viewport = getViewportSize();
       const margin = 8;
       const width = Math.min(340, viewport.width - margin * 2);
+      const header = panelRef.current?.querySelector("header");
+      const scrollContent = panelRef.current?.querySelector<HTMLElement>("[data-filter-scroll]");
+      const contentHeight =
+        (header?.getBoundingClientRect().height ?? 0) + (scrollContent?.scrollHeight ?? 0) + 2;
+      const availableHeight = Math.max(240, viewport.height - margin * 2);
+      const height = Math.min(Math.max(240, contentHeight || 560), availableHeight);
       let left = viewport.offsetLeft + margin;
       let top = viewport.offsetTop + margin;
 
@@ -2904,23 +2911,20 @@ function FilterPopover({
             Math.max(viewport.offsetLeft + margin, rect.left),
             viewport.offsetLeft + viewport.width - width - margin
           );
-          top = rect.bottom + 8;
         }
       }
 
-      const maxBottom = viewport.offsetTop + viewport.height - margin;
-      const maxHeight = Math.max(240, maxBottom - top);
-      if (top + 240 > maxBottom) {
-        top = Math.max(viewport.offsetTop + margin, maxBottom - maxHeight);
-      }
+      const minTop = viewport.offsetTop + margin;
+      const maxTop = Math.max(minTop, viewport.offsetTop + viewport.height - height - margin);
+      top = clamp(top, minTop, maxTop);
 
       setStyle({
         position: "fixed",
         left,
         top,
         width,
-        height: maxHeight,
-        maxHeight,
+        height,
+        maxHeight: availableHeight,
         zIndex: 80,
       });
     };
@@ -2964,7 +2968,13 @@ function FilterPopover({
   }
 
   return createPortal(
-    <div style={style} className="flex flex-col overflow-hidden" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div
+      ref={panelRef}
+      style={style}
+      className="flex flex-col overflow-hidden"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
     </div>,
     document.body
@@ -3106,6 +3116,7 @@ function FilterPanel({
       </header>
 
       <div
+        data-filter-scroll
         className={cn(
           "min-h-0 flex-1 space-y-3.5 overflow-y-auto p-2.5",
           layout === "sheet" && "space-y-4 overscroll-contain"
