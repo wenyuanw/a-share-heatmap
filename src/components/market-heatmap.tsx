@@ -38,7 +38,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getMessages, type HeatmapMessages, type Locale } from "@/lib/i18n";
+import { getMessages, type Locale } from "@/lib/i18n";
 import {
   customHeatThemesStorageKey,
   defaultHeatThemeId,
@@ -225,7 +225,7 @@ function clampOffset(width: number, height: number, scale: number, x: number, y:
   };
 }
 
-export function MarketHeatmap({ locale: initialLocale }: { locale: Locale; messages?: HeatmapMessages }) {
+export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const inspectorListRef = useRef<HTMLDivElement | null>(null);
