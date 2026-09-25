@@ -128,6 +128,8 @@ pnpm build      # 生产构建
 pnpm start      # 启动生产服务
 pnpm lint       # ESLint 检查
 pnpm typecheck  # TypeScript 类型检查
+pnpm test       # vitest 单元测试
+pnpm test:watch # watch 模式运行单元测试
 ```
 
 ## 数据说明
