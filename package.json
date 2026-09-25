@@ -2,6 +2,7 @@
   "name": "a-share-heatmap",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.13.0",
   "description": "A 股市场热力图：用一张可交互的市场云图观察 A 股全市场涨跌、板块轮动和权重分布。",
   "scripts": {
     "dev": "next dev",
@@ -37,8 +38,5 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": []
   }
 }

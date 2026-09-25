@@ -25,8 +25,6 @@ jobs:
 
       - name: 安装 pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -36,6 +34,9 @@ jobs:
 
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
+
+      - name: 单元测试
+        run: pnpm test
 
       - name: 刷新并验证股票数据
         run: pnpm refresh:data
