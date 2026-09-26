@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,7 +88,7 @@ import { InspectorHeaderSparkline, InspectorSortControls } from "@/components/he
 import { MobileStockSheet } from "@/components/heatmap/mobile-stock-sheet";
 import { HeatmapLoadingOverlay } from "@/components/heatmap/loading-overlay";
 import { FilterPanel, FilterPopover } from "@/components/heatmap/filter-panel";
-import { SettingsDrawer } from "@/components/heatmap/settings-drawer";
+import { getCanvasViewportBounds, intersectsBounds } from "@/components/heatmap/canvas-viewport";
 import {
   getBoardHeaderColor,
   getChangeTextColor,
@@ -224,6 +225,11 @@ function clampOffset(width: number, height: number, scale: number, x: number, y:
     y: clamp(y, minY, 0),
   };
 }
+
+const SettingsDrawer = dynamic(
+  () => import("@/components/heatmap/settings-drawer").then((module) => module.SettingsDrawer),
+  { ssr: false }
+);
 
 export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -2121,12 +2127,21 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     context.translate(view.x, view.y);
     context.scale(view.scale, view.scale);
 
+    // Skip off-screen shapes and text; keep a margin for selection/border strokes.
+    const viewportBounds = getCanvasViewportBounds(canvasSize.width, canvasSize.height, {
+      x: view.x,
+      y: view.y,
+      scale: view.scale,
+    });
+
     for (const board of layout.boardRects) {
+      if (!intersectsBounds(board, viewportBounds)) continue;
       context.fillStyle = heatmapCanvasTheme.boardFill;
       context.fillRect(board.x, board.y, board.width, board.height);
     }
 
     for (const subBoard of layout.subBoardRects) {
+      if (!intersectsBounds(subBoard, viewportBounds)) continue;
       const stats =
         sectorVisualStats.subBoards.get(sectorStatsKey(subBoard.boardName, subBoard.name)) ?? subBoard;
       context.fillStyle = thumbnailMode
@@ -2137,6 +2152,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
 
     if (!thumbnailMode) {
       for (const stock of layout.stockRects) {
+        if (!intersectsBounds(stock, viewportBounds)) continue;
         const quote = quotes[stock.code];
         const changePct = quote?.changePct ?? stock.changePct;
         context.fillStyle = getHeatColor(activeHeatTheme, changePct, priceColorMode, displayMode);
@@ -2164,6 +2180,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     }
 
     for (const subBoard of layout.subBoardRects) {
+      if (!intersectsBounds(subBoard, viewportBounds)) continue;
       const stats =
         sectorVisualStats.subBoards.get(sectorStatsKey(subBoard.boardName, subBoard.name)) ?? subBoard;
       const isActiveSubBoard =
@@ -2222,6 +2239,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     }
 
     for (const board of layout.boardRects) {
+      if (!intersectsBounds(board, viewportBounds)) continue;
       const stats = sectorVisualStats.boards.get(board.name) ?? board;
       const isActiveBoard = activeBoardName === board.name;
       const isTitleHovered = hoveredBoardTitleName === board.name;
@@ -4554,43 +4572,45 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         />
       </FilterPopover>
 
-      <SettingsDrawer
-        open={settingsOpen}
-        tab={settingsTab}
-        messages={messages}
-        locale={locale}
-        displayMode={displayMode}
-        filterOpenMode={filterOpenMode}
-        headerTrendStats={headerTrendStats}
-        heatmapBorders={heatmapBorders}
-        themeColor={themeColor}
-        priceColorMode={priceColorMode}
-        heatThemeId={heatThemeId}
-        customHeatThemes={customHeatThemes}
-        activeHeatTheme={activeHeatTheme}
-        shortcutBindings={shortcutBindings}
-        watchlist={watchlist}
-        areaTipMessage={areaTipMessage}
-        onClose={() => setSettingsOpen(false)}
-        onTabChange={setSettingsTab}
-        onLocaleChange={setLocale}
-        onDisplayModeChange={setDisplayMode}
-        onFilterOpenModeChange={setFilterOpenMode}
-        onHeaderTrendStatsChange={setHeaderTrendStats}
-        onHeatmapBordersChange={handleHeatmapBordersChange}
-        refreshIntervalSeconds={refreshIntervalSeconds}
-        onRefreshIntervalChange={setRefreshIntervalSeconds}
-        onThemeColorChange={setThemeColor}
-        onPriceColorModeChange={setPriceColorMode}
-        onHeatThemeIdChange={setHeatThemeId}
-        onCustomHeatThemesChange={setCustomHeatThemes}
-        onShortcutBindingsChange={setShortcutBindings}
-        onShortcutRecordingChange={setShortcutRecording}
-        onWatchlistAdd={addWatchlistItem}
-        onWatchlistRemove={removeWatchlistItem}
-        onWatchlistClear={clearWatchlist}
-        onWatchlistImportText={importWatchlistFromText}
-      />
+      {settingsOpen && (
+        <SettingsDrawer
+          open={settingsOpen}
+          tab={settingsTab}
+          messages={messages}
+          locale={locale}
+          displayMode={displayMode}
+          filterOpenMode={filterOpenMode}
+          headerTrendStats={headerTrendStats}
+          heatmapBorders={heatmapBorders}
+          themeColor={themeColor}
+          priceColorMode={priceColorMode}
+          heatThemeId={heatThemeId}
+          customHeatThemes={customHeatThemes}
+          activeHeatTheme={activeHeatTheme}
+          shortcutBindings={shortcutBindings}
+          watchlist={watchlist}
+          areaTipMessage={areaTipMessage}
+          onClose={() => setSettingsOpen(false)}
+          onTabChange={setSettingsTab}
+          onLocaleChange={setLocale}
+          onDisplayModeChange={setDisplayMode}
+          onFilterOpenModeChange={setFilterOpenMode}
+          onHeaderTrendStatsChange={setHeaderTrendStats}
+          onHeatmapBordersChange={handleHeatmapBordersChange}
+          refreshIntervalSeconds={refreshIntervalSeconds}
+          onRefreshIntervalChange={setRefreshIntervalSeconds}
+          onThemeColorChange={setThemeColor}
+          onPriceColorModeChange={setPriceColorMode}
+          onHeatThemeIdChange={setHeatThemeId}
+          onCustomHeatThemesChange={setCustomHeatThemes}
+          onShortcutBindingsChange={setShortcutBindings}
+          onShortcutRecordingChange={setShortcutRecording}
+          onWatchlistAdd={addWatchlistItem}
+          onWatchlistRemove={removeWatchlistItem}
+          onWatchlistClear={clearWatchlist}
+          onWatchlistImportText={importWatchlistFromText}
+        />
+      )}
 
       {sharePreview && (
         <div className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-2 backdrop-blur-sm sm:p-3">
