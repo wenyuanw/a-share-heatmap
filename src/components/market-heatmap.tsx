@@ -339,6 +339,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const lastBoardRectsRef = useRef<BoardRect[]>([]);
   const lastSubBoardRectsRef = useRef<SubBoardRect[]>([]);
   const quoteStreamRef = useRef<{ key: string; controller: AbortController } | null>(null);
+  const marketSummaryControllerRef = useRef<AbortController | null>(null);
   const pendingQuoteCommitRef = useRef<PendingQuoteCommit | null>(null);
   const quoteCommitTimerRef = useRef<number | null>(null);
   const quoteCommitFrameRef = useRef<number | null>(null);
@@ -979,7 +980,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   );
 
   const fetchMarketSummaries = useCallback(async (nextPeriod: HeatmapPeriodKey) => {
-    const response = await fetch(`/api/heatmap/overview?period=${nextPeriod}`);
+    marketSummaryControllerRef.current?.abort();
+    const controller = new AbortController();
+    marketSummaryControllerRef.current = controller;
+    const response = await fetch(`/api/heatmap/overview?period=${nextPeriod}`, {
+      signal: controller.signal,
+    });
     if (!response.ok) {
       throw new Error(messages.errorLoad);
     }
@@ -995,7 +1001,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       };
     }
 
-    setMarketSummaries(next);
+    if (!controller.signal.aborted) {
+      setMarketSummaries(next);
+    }
   }, [messages.errorLoad]);
 
   useEffect(() => {
@@ -1097,6 +1105,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
 
   const quoteQueryKey = `${market}:${period}:${isWatchlist ? watchlistCodes.join(",") : ""}`;
 
+  // Overview includes every market, so switching markets or watchlist entries
+  // must retain it. Only a period change invalidates these values.
+  useEffect(() => {
+    setMarketSummaries({});
+    return () => marketSummaryControllerRef.current?.abort();
+  }, [period]);
+
   useEffect(() => {
     quoteStreamRef.current?.controller.abort();
     quoteStreamRef.current = null;
@@ -1106,7 +1121,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     setQuotes({});
     setSettledQuotes({});
     setQuoteLoadProgress(null);
-    setMarketSummaries({});
 
     return () => {
       quoteStreamRef.current?.controller.abort();
