@@ -1,0 +1,36 @@
+{
+  "reviewedAt": "2026-11-02",
+  "description": "Verified announcements for Beijing terminations/transfers and legacy code changes not covered by the Shanghai/Shenzhen terminated-listing tables. Add new cases only with an effective date and source; never infer from names or missing quotes.",
+  "stocks": [
+    {
+      "code": "920680.BJ", "name": "广道退", "delistedOn": "2026-01-05",
+      "reason": "delisted",
+      "source": "https://www.bse.cn/disclosure/2025/2025-12-31/8690dbac1d5c42db98e9c7388e562129.pdf"
+    },
+    {
+      "code": "920305.BJ", "name": "云创退", "delistedOn": "2026-07-30",
+      "reason": "delisted",
+      "source": "https://www.bse.cn/disclosure/2026/2026-07-29/8a64d7d9ca1641609307b4f2aa5fecaf.pdf"
+    },
+    {
+      "code": "832317.BJ", "name": "观典防务", "delistedOn": "2022-04-26",
+      "reason": "transferred", "replacementCode": "688287.SH",
+      "source": "https://www.bse.cn/disclosure/2022/2022-04-25/1650875588_282390.pdf"
+    },
+    {
+      "code": "833874.BJ", "name": "泰祥股份", "delistedOn": "2022-07-18",
+      "reason": "transferred", "replacementCode": "301192.SZ",
+      "source": "https://www.bse.cn/disclosure/2022/2022-07-15/1657874128_515467.pdf"
+    },
+    {
+      "code": "833994.BJ", "name": "翰博高新", "delistedOn": "2022-07-25",
+      "reason": "transferred", "replacementCode": "301321.SZ",
+      "source": "https://3g.zszq.com/ywgg/bulletin?id=MnAyR7TX"
+    },
+    {
+      "code": "600849.SH", "name": "上药转换", "delistedOn": "2010-03-05",
+      "reason": "code-changed", "replacementCode": "601607.SH",
+      "source": "https://www.p5w.net/stock/ssgsyj/hsgg/201003/t2847146.htm"
+    }
+  ]
+}

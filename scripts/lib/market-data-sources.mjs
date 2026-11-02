@@ -156,7 +156,7 @@ export async function fetchTencentRows(previousSnapshot, {
       f21: quote?.f21 || stock.floatMarketCap,
     };
   });
-  warn(`Tencent refreshed ${quotes.size}/${stocks.length} stocks; retained the existing stock universe and industry mappings. New listings/delistings will be synchronized when Eastmoney recovers.`);
+  warn(`Tencent refreshed ${quotes.size}/${stocks.length} stocks; retained the supplied stock universe and industry mappings. Listing status is reconciled separately; new listings require the full-market feed.`);
   return { rows, remoteTotal: stocks.length, source: "tencent" };
 }
 

@@ -44,7 +44,7 @@ describe("东方财富分页和数据源切换", () => {
     expect(result.remoteTotal).toBe(10);
     expect(result.rows[0]).toMatchObject({ f2: 11.25, f3: -2.5, f20: 2.34e9, f21: 1.23e9 });
     expect(fetchImpl).toHaveBeenCalledTimes(6);
-    expect(warn.mock.calls.flat().join(" ")).toContain("New listings/delistings");
+    expect(warn.mock.calls.flat().join(" ")).toContain("Listing status is reconciled separately");
   });
 
   it("后续页失败时放弃不完整的主源结果，切换备用源", async () => {

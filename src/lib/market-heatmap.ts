@@ -1,5 +1,7 @@
 import fallbackMarketSnapshot from "@/lib/data/market-heatmap-fallback.json";
 import subboardSnapshot from "@/lib/data/market-heatmap-subboards.json";
+import listingStatusSnapshot from "@/lib/data/stock-listing-status.json";
+import { getDelistedCodes, isAShareCode, mergeEligibleStocks } from "@/lib/stock-listing-status.mjs";
 import {
   getZza50ConstituentSnapshot,
   getZza50ConstituentStatus,
@@ -303,7 +305,9 @@ const subboardSeed = subboardSnapshot as {
   subboards: Record<string, { sectorName: string; subBoardName: string }>;
 };
 
-const baselineStocks: StockSnapshot[] = fallbackSnapshotSeed.stocks.map((stock) => {
+const excludedStockCodes = getDelistedCodes(listingStatusSnapshot);
+const isEligibleStock = (code: string) => isAShareCode(code) && !excludedStockCodes.has(code);
+const baselineStocks: StockSnapshot[] = fallbackSnapshotSeed.stocks.filter((stock) => isEligibleStock(stock.code)).map((stock) => {
   const mapped = subboardSeed.subboards[stock.code];
   return {
     ...stock,
@@ -698,7 +702,7 @@ function parseSinaQuoteBatch(rawText: string) {
 
   for (const match of rawText.matchAll(pattern)) {
     const code = parseSinaCode(match[1]);
-    if (!code) {
+    if (!code || !isEligibleStock(code)) {
       continue;
     }
 
@@ -743,7 +747,7 @@ function parseTencentQuoteBatch(rawText: string) {
 
   for (const match of rawText.matchAll(pattern)) {
     const code = parseSinaCode(match[1]);
-    if (!code) {
+    if (!code || !isEligibleStock(code)) {
       continue;
     }
 
@@ -799,7 +803,7 @@ function parseTencentQuoteBatch(rawText: string) {
 
 function parseEastmoneyStockRow(row: Record<string, number | string | undefined>): StockSnapshot | null {
   const code = parseEastmoneyCode(row.f12, row.f13);
-  if (!code) {
+  if (!code || !isEligibleStock(code)) {
     return null;
   }
 
@@ -849,7 +853,7 @@ function parseEastmoneyQuoteBatch(payload: unknown) {
   for (const item of diff) {
     const row = item as Record<string, number | string | undefined>;
     const code = parseEastmoneyCode(row.f12, row.f13);
-    if (!code) {
+    if (!code || !isEligibleStock(code)) {
       continue;
     }
 
@@ -1506,19 +1510,9 @@ function mergeStockSnapshots(primary: QuoteSnapshot, secondary: QuoteSnapshot | 
 }
 
 function getStocksForQuoteSnapshot(snapshot: QuoteSnapshot) {
-  if (snapshot.universeComplete && snapshot.stocks?.length) {
-    return snapshot.stocks;
-  }
-
-  if (!snapshot.stocks?.length) {
-    return baselineStocks;
-  }
-
-  const stocksByCode = new Map(baselineStocks.map((stock) => [stock.code, stock]));
-  for (const stock of snapshot.stocks) {
-    stocksByCode.set(stock.code, stock);
-  }
-  return Array.from(stocksByCode.values());
+  // Even a complete quote feed can omit suspended stocks. Listing status,
+  // rather than quote availability, controls removal from the universe.
+  return mergeEligibleStocks(baselineStocks, snapshot.stocks ?? [], excludedStockCodes);
 }
 
 function mergeQuoteSnapshots(

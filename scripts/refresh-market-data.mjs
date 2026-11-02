@@ -5,10 +5,13 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { loadMarketRows } from "./lib/market-data-sources.mjs";
+import { fetchListingStatus } from "./lib/stock-listing-status.mjs";
+import { getDelistedCodes, isAShareCode, mergeEligibleStocks } from "../src/lib/stock-listing-status.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fallbackPath = path.join(repositoryRoot, "src/lib/data/market-heatmap-fallback.json");
 const subboardsPath = path.join(repositoryRoot, "src/lib/data/market-heatmap-subboards.json");
+const listingStatusPath = path.join(repositoryRoot, "src/lib/data/stock-listing-status.json");
 const checkOnly = process.argv.includes("--check");
 const source = process.argv.find((arg) => arg.startsWith("--source="))?.slice("--source=".length) ?? "auto";
 
@@ -81,17 +84,30 @@ async function main() {
   ]);
   const previousFallback = JSON.parse(fallbackRaw);
   const previousSubboards = JSON.parse(subboardsRaw);
+  const previousListingStatus = JSON.parse(await fs.readFile(listingStatusPath, "utf8"));
+  // Fail before writing anything if the independent listing register is unavailable
+  // or truncated. Never let a quote fallback silently restore terminated codes.
+  const listingStatus = await fetchListingStatus({ previous: previousListingStatus });
+  const excludedCodes = getDelistedCodes(listingStatus);
+  const eligiblePreviousStocks = mergeEligibleStocks(previousFallback.stocks, [], excludedCodes);
   const previousStocksByCode = new Map(previousFallback.stocks.map((stock) => [stock.code, stock]));
   const sectorBySubBoard = buildSectorLookup(previousSubboards.subboards);
 
-  const { rows, remoteTotal, source: dataSource } = await loadMarketRows(previousFallback, { source });
+  const { rows, remoteTotal, source: dataSource } = await loadMarketRows(
+    { ...previousFallback, stocks: eligiblePreviousStocks }, { source }
+  );
   const unknownSubBoards = new Set();
   const stocksByCode = new Map();
   const mappingsByCode = new Map();
 
+  let excludedRowCount = 0;
   for (const row of rows) {
     const code = normalizeCode(row.f12, row.f13);
     const name = String(row.f14 ?? "").trim();
+    if (code && (!isAShareCode(code) || excludedCodes.has(code))) {
+      excludedRowCount += 1;
+      continue;
+    }
     if (!code || !name) {
       continue;
     }
@@ -126,13 +142,22 @@ async function main() {
     mappingsByCode.set(code, { sectorName, subBoardName });
   }
 
-  const stocks = Array.from(stocksByCode.values()).sort((left, right) => {
+  const stocks = mergeEligibleStocks(eligiblePreviousStocks, Array.from(stocksByCode.values()), excludedCodes).sort((left, right) => {
     const boardOrder = left.boardName.localeCompare(right.boardName, "zh-CN");
     if (boardOrder !== 0) return boardOrder;
     const capOrder = right.floatMarketCap - left.floatMarketCap;
     return capOrder !== 0 ? capOrder : left.code.localeCompare(right.code);
   });
-  validateSnapshot(stocks, previousFallback.stocks, remoteTotal);
+  // Check removals against the eligible baseline, so confirmed terminations do
+  // not require weakening the existing protection against accidental mass loss.
+  validateSnapshot(stocks, eligiblePreviousStocks, remoteTotal - excludedRowCount);
+  for (const stock of stocks) {
+    if (!mappingsByCode.has(stock.code)) {
+      mappingsByCode.set(stock.code, previousSubboards.subboards[stock.code] ?? {
+        sectorName: stock.boardName, subBoardName: stock.boardName,
+      });
+    }
+  }
 
   const latestQuoteTimestamp = rows.reduce((latest, row) => Math.max(latest, finiteNumber(row.f124)), 0);
   const updatedAt = latestQuoteTimestamp > 0
@@ -155,12 +180,14 @@ async function main() {
 
   const previousCodes = new Set(previousFallback.stocks.map((stock) => stock.code));
   const added = stocks.filter((stock) => !previousCodes.has(stock.code));
-  const removed = previousFallback.stocks.filter((stock) => !stocksByCode.has(stock.code));
+  const retainedCodes = new Set(stocks.map((stock) => stock.code));
+  const removed = previousFallback.stocks.filter((stock) => !retainedCodes.has(stock.code));
 
   if (!checkOnly) {
     await Promise.all([
       writeJsonAtomically(fallbackPath, fallbackSnapshot),
       writeJsonAtomically(subboardsPath, subboardSnapshot),
+      writeJsonAtomically(listingStatusPath, listingStatus),
     ]);
   }
 
