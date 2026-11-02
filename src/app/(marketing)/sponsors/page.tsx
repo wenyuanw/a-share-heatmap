@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/marketing/button-link";
 import { JsonLd } from "@/components/marketing/json-ld";
 import { Reveal } from "@/components/marketing/reveal";
 import { RewardQr } from "@/components/marketing/reward-qr";
+import { SupporterAvatar } from "@/components/marketing/supporter-avatar";
 import supporters from "@/lib/data/supporters.json";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -94,19 +95,8 @@ const freeSupportItems: FreeSupportItem[] = [
 type Supporter = {
   name: string;
   url?: string;
+  icon?: string;
 };
-
-function SupporterAvatar({ name }: { name: string }) {
-  const initial = name.trim().charAt(0).toUpperCase() || "谢";
-  return (
-    <span
-      aria-hidden
-      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand/25 to-brand/10 text-sm font-semibold text-brand"
-    >
-      {initial}
-    </span>
-  );
-}
 
 export default function SponsorsPage() {
   const supporterList: Supporter[] = supporters;
@@ -276,7 +266,7 @@ export default function SponsorsPage() {
                   !supporter.url && "justify-start",
                 )}
               >
-                <SupporterAvatar name={supporter.name} />
+                <SupporterAvatar name={supporter.name} url={supporter.url} icon={supporter.icon} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{supporter.name}</p>
                   {supporter.url ? (
