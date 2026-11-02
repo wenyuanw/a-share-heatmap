@@ -19,7 +19,9 @@
 </p>
 
 <p align="center">
-  <img src="./public/preview.png" alt="A 股市场热力图预览" width="820" />
+  <a href="./public/preview.png">
+    <img src="./public/preview.png" alt="A 股市场热力图桌面与手机端预览：默认经典配色，当日行情" width="1000" />
+  </a>
 </p>
 
 ## 功能亮点
@@ -170,7 +172,8 @@ pnpm refresh:data  # 校验通过后更新两份内置快照
 <!-- supporters:start -->
 
 - [laojuelv.com](https://laojuelv.com)
-- 拾伍、LZ、Gin 等群友
+- [newkeeb.com](https://newkeeb.com)
+- SWQ、LZ、Gin 等群友
 
 <!-- supporters:end -->
 

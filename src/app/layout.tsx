@@ -49,6 +49,11 @@ const themeInitScript = `
     document.documentElement.classList.add("dark");
     document.documentElement.style.colorScheme = "dark";
   }
+  try {
+    if (window.location.pathname === "/") {
+      document.documentElement.classList.add("heatmap-page-active");
+    }
+  } catch {}
 `;
 
 export default function RootLayout({

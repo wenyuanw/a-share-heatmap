@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import Link from "next/link";
 import { Bot, Check, ChevronDown, Coffee, Copy, ExternalLink, Info, Keyboard, Mail, Megaphone, Moon, Palette, Star, Sun, X } from "lucide-react";
 import { toast } from "sonner";
 import { WatchlistManager } from "@/components/watchlist-panel";
@@ -958,6 +959,28 @@ export function SettingsDrawer({
                         <Mail className="size-3.5 opacity-80" />
                       </a>
                     </div>
+                  </div>
+                </section>
+                <section className="border border-border bg-background/70 p-3.5">
+                  <h3 className="text-sm font-semibold">{messages.sitePagesTitle}</h3>
+                  <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                    {(
+                      [
+                        ["/features", messages.sitePageFeatures],
+                        ["/changelog", messages.sitePageChangelog],
+                        ["/whats-new", messages.sitePageWhatsNew],
+                        ["/sponsors", messages.sitePageSponsors],
+                      ] as const
+                    ).map(([href, label]) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        className="inline-flex items-center justify-between gap-1.5 border border-border bg-background/60 px-2.5 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+                      >
+                        {label}
+                        <ExternalLink className="size-3 shrink-0 opacity-60" />
+                      </Link>
+                    ))}
                   </div>
                 </section>
               </div>

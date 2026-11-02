@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,8 @@ import {
   headerTrendStatsStorageKey,
   heatmapBordersQueryKey,
   heatmapBordersStorageKey,
+  heatmapMarketQueryKey,
+  heatmapPeriodQueryKey,
   heatmapCanvasThemes,
   legendTicks,
   marketOptions,
@@ -426,6 +429,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     return () => window.removeEventListener("popstate", syncFromUrl);
   }, []);
 
+  // Deep-link values from ?market= / ?period=; cleared once the user picks another value.
+  const urlMarketRef = useRef<string | null>(null);
+  const urlPeriodRef = useRef<string | null>(null);
+
   useEffect(() => {
     try {
       const storedLocale = window.localStorage.getItem("heatmap-locale");
@@ -518,6 +525,18 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     } catch {
       /* Preferences are optional. */
     } finally {
+      // URL parameters also work in embeds where browser storage is blocked.
+      const queryParams = new URLSearchParams(window.location.search);
+      const queryMarket = queryParams.get(heatmapMarketQueryKey);
+      if (queryMarket && isHeatmapUniverse(queryMarket)) {
+        urlMarketRef.current = queryMarket;
+        setMarket(queryMarket);
+      }
+      const queryPeriod = queryParams.get(heatmapPeriodQueryKey);
+      if (queryPeriod && isHeatmapPeriodKey(queryPeriod)) {
+        urlPeriodRef.current = queryPeriod;
+        setPeriod(queryPeriod);
+      }
       setPreferencesReady(true);
     }
   }, []);
@@ -647,6 +666,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     } catch {
       /* Preferences are optional. */
     }
+    if (urlMarketRef.current && market !== urlMarketRef.current) {
+      urlMarketRef.current = null;
+      const url = new URL(window.location.href);
+      if (url.searchParams.has(heatmapMarketQueryKey)) {
+        url.searchParams.delete(heatmapMarketQueryKey);
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+    }
   }, [market, preferencesReady]);
 
   useEffect(() => {
@@ -668,6 +695,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       window.sessionStorage.setItem(periodStorageKey, period);
     } catch {
       /* Preferences are optional. */
+    }
+    if (urlPeriodRef.current && period !== urlPeriodRef.current) {
+      urlPeriodRef.current = null;
+      const url = new URL(window.location.href);
+      if (url.searchParams.has(heatmapPeriodQueryKey)) {
+        url.searchParams.delete(heatmapPeriodQueryKey);
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
     }
   }, [period, preferencesReady]);
 
@@ -3495,7 +3530,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                       isEnglish ? "text-[12px] sm:text-[13px]" : "text-[13px] sm:text-sm"
                     )}
                   >
-                    {messages.title}
+                    <Link
+                      href="/features"
+                      prefetch={false}
+                      title={messages.aboutSite}
+                      className="block truncate transition-colors hover:text-brand focus-visible:text-brand focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+                    >
+                      {messages.title}
+                    </Link>
                   </h2>
                 </div>
                 <button
