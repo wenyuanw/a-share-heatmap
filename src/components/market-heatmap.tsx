@@ -303,6 +303,11 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     ? sharePreviews[shareBackgroundEnabled ? "background" : "plain"]
     : null;
   const [sharePending, setSharePending] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareError, setShareError] = useState(false);
+  const [shareAspectRatio, setShareAspectRatio] = useState(16 / 9);
+  const shareRequestRef = useRef(0);
+  const shareCloseButtonRef = useRef<HTMLButtonElement>(null);
 
   const [hoveredStockCode, setHoveredStockCode] = useState<string | null>(null);
   const [hoveredBoardName, setHoveredBoardName] = useState<string | null>(null);
@@ -1136,6 +1141,19 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       }
     };
   }, [sharePreviews]);
+
+  useEffect(() => () => { shareRequestRef.current += 1; }, []);
+
+  useEffect(() => {
+    if (!shareDialogOpen) return;
+    const previouslyFocused = document.activeElement;
+    shareCloseButtonRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  }, [shareDialogOpen]);
 
   useEffect(() => {
     function stopPan() {
@@ -3061,8 +3079,18 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       return;
     }
 
+    const requestId = ++shareRequestRef.current;
+    const isCurrentRequest = () => shareRequestRef.current === requestId;
+    shareCloseButtonRef.current?.focus({ preventScroll: true });
+    setShareDialogOpen(true);
     setSharePending(true);
+    setShareError(false);
+    setSharePreviews(null);
+    setShareBackgroundEnabled(true);
+    setShareAspectRatio(sourceCanvas.width / Math.max(1, sourceCanvas.height));
     let logoRaster: ShareLogoRaster | null = null;
+    const previewUrls: string[] = [];
+    let previewsPublished = false;
 
     try {
       // Freeze the chart before loading assets so both variants share one snapshot.
@@ -3074,7 +3102,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         throw new Error("Snapshot context unavailable");
       }
       snapshotContext.drawImage(sourceCanvas, 0, 0);
-      const pixelRatio = sourceCanvas.width / Math.max(1, canvasSize.width);
+      // Let React commit and the browser paint the dialog before composing the PNGs.
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => { setTimeout(resolve, 0); });
+      });
+      if (!isCurrentRequest()) return;
+      const pixelRatio = snapshotCanvas.width / Math.max(1, canvasSize.width);
       const baseWidth = Math.max(1, canvasSize.width);
       const cssFontPx = clamp(baseWidth * 0.0085, 9, 11);
       const cssHorizontalPadding = clamp(baseWidth * 0.008, 6, 12);
@@ -3084,8 +3117,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       const bottomPadding = cssBandPadding * pixelRatio;
       const fontPx = cssFontPx * pixelRatio;
       const exportCanvas = document.createElement("canvas");
-      exportCanvas.width = Math.round(sourceCanvas.width + horizontalPadding * 2);
-      exportCanvas.height = Math.round(sourceCanvas.height + topPadding + bottomPadding);
+      exportCanvas.width = Math.round(snapshotCanvas.width + horizontalPadding * 2);
+      exportCanvas.height = Math.round(snapshotCanvas.height + topPadding + bottomPadding);
 
       const context = exportCanvas.getContext("2d");
       if (!context) {
@@ -3105,6 +3138,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       } catch {
         /* optional: share without logo if asset fails */
       }
+      if (!isCurrentRequest()) return;
       const logoImage = logoRaster
         ? logoRaster.kind === "bitmap" ? logoRaster.bitmap : logoRaster.image
         : undefined;
@@ -3161,24 +3195,33 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
           logo: logoImage,
         })),
       ]);
+      if (!isCurrentRequest()) return;
+      const plainUrl = URL.createObjectURL(blob);
+      const backgroundUrl = URL.createObjectURL(backgroundBlob);
+      previewUrls.push(plainUrl, backgroundUrl);
+      // Keep the placeholder until the images can actually be displayed.
+      await Promise.all(previewUrls.map(async (url) => {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+      }));
+      if (!isCurrentRequest()) return;
       const stamp = updatedAt ? updatedAt.replace(/[:T]/g, "-").slice(0, 19) : Date.now().toString();
       const filename = `ashare-heatmap-${market}-${period}-${stamp}.png`;
 
-      setShareBackgroundEnabled(true);
       setSharePreviews({
-        plain: { url: URL.createObjectURL(blob), filename, blob },
-        background: { url: URL.createObjectURL(backgroundBlob), filename, blob: backgroundBlob },
+        plain: { url: plainUrl, filename, blob },
+        background: { url: backgroundUrl, filename, blob: backgroundBlob },
       });
+      previewsPublished = true;
     } catch {
-      toast.error(messages.shareFailed, {
-        id: "heatmap-share-generate",
-        duration: 3200,
-      });
+      if (isCurrentRequest()) setShareError(true);
     } finally {
+      if (!previewsPublished) previewUrls.forEach((url) => URL.revokeObjectURL(url));
       if (logoRaster?.kind === "bitmap") {
         logoRaster.bitmap.close();
       }
-      setSharePending(false);
+      if (isCurrentRequest()) setSharePending(false);
     }
   }, [canvasSize.width, isLightMode, market, messages, period, updatedAt]);
 
@@ -3353,6 +3396,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   ]);
 
   const closeSharePreview = useCallback(() => {
+    shareRequestRef.current += 1;
+    setShareDialogOpen(false);
+    setSharePending(false);
+    setShareError(false);
     setSharePreviews(null);
   }, []);
 
@@ -3374,7 +3421,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         if (shortcutRecording) {
           return;
         }
-        if (sharePreview) {
+        if (shareDialogOpen) {
           event.preventDefault();
           closeSharePreview();
           return;
@@ -3409,7 +3456,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         return;
       }
 
-      if (sharePreview) {
+      if (shareDialogOpen) {
         return;
       }
 
@@ -3472,7 +3519,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     resetView,
     settingsOpen,
     sharePending,
-    sharePreview,
+    shareDialogOpen,
     shortcutBindings,
     shortcutRecording,
     toggleFilters,
@@ -4701,12 +4748,32 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         />
       )}
 
-      {sharePreview && (
+      {shareDialogOpen && (
         <div className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-2 backdrop-blur-sm sm:p-3">
-          <div className="flex max-h-[min(96vh,100%)] w-full max-w-[min(96vw,90rem)] flex-col border border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-preview-title"
+            onKeyDown={(event) => {
+              if (event.key !== "Tab") return;
+              const controls = event.currentTarget.querySelectorAll<HTMLElement>(
+                'button:not(:disabled), input:not(:disabled)'
+              );
+              const first = controls[0];
+              const last = controls[controls.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }}
+            className="flex max-h-[min(96vh,100%)] w-full max-w-[min(96vw,90rem)] flex-col border border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+          >
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
-                <h3 className="text-base font-semibold">{messages.sharePreviewTitle}</h3>
+                <h3 id="share-preview-title" className="text-base font-semibold">{messages.sharePreviewTitle}</h3>
               </div>
               <div className="flex items-center gap-3">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
@@ -4724,6 +4791,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   />
                 </label>
                 <button
+                  ref={shareCloseButtonRef}
                   type="button"
                   onClick={closeSharePreview}
                   className="inline-flex size-9 items-center justify-center border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -4734,15 +4802,46 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className={cn("min-h-0 flex-1 overflow-auto p-3 sm:p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}>
-              <img
+            <div
+              aria-busy={sharePending}
+              className={cn("flex h-[calc(96vh-9.5rem)] max-h-[60rem] min-h-0 items-center justify-center overflow-hidden p-3 sm:p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}
+            >
+              {sharePreview ? <img
                 src={sharePreview.url}
                 alt={messages.sharePreviewTitle}
                 className={cn(
-                  "mx-auto h-auto max-h-[calc(96vh-9.5rem)] w-auto max-w-full object-contain border shadow-[0_18px_60px_rgba(0,0,0,0.32)]",
+                  "mx-auto h-auto max-h-full w-auto max-w-full object-contain border shadow-[0_18px_60px_rgba(0,0,0,0.32)]",
                   isLightMode ? "border-border bg-background" : "border-slate-700/80 bg-[#10141b]"
                 )}
-              />
+              /> : shareError ? (
+                <div role="alert" className="flex flex-col items-center gap-4 px-4 text-center">
+                  <p className="text-sm text-muted-foreground">{messages.shareFailed}</p>
+                  <Button variant="outline" onClick={() => void createSharePreview()}>
+                    <RotateCcw className="mr-2 size-4" />
+                    {messages.shareRetry}
+                  </Button>
+                </div>
+              ) : (
+                <div className="relative h-full max-w-full overflow-hidden border border-border/70 bg-background/40 p-3 sm:p-4" style={{ aspectRatio: shareAspectRatio }}>
+                  <div aria-hidden="true" className="flex h-full flex-col gap-3 opacity-60 motion-safe:animate-pulse">
+                    <div className="h-3 w-28 shrink-0 rounded-sm bg-muted-foreground/20" />
+                    <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-3 gap-2">
+                      <div className="col-span-2 row-span-2 bg-muted-foreground/15" />
+                      <div className="bg-muted-foreground/20" />
+                      <div className="bg-muted-foreground/10" />
+                      <div className="bg-muted-foreground/20" />
+                      <div className="col-span-2 bg-muted-foreground/10" />
+                    </div>
+                    <div className="mx-auto h-2 w-36 shrink-0 rounded-sm bg-muted-foreground/15" />
+                  </div>
+                  <div role="status" className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex items-center gap-2 rounded-md border border-border bg-card/95 px-4 py-3 text-sm text-foreground shadow-lg">
+                      <Loader2 aria-hidden="true" className="size-4 text-brand motion-safe:animate-spin" />
+                      {messages.sharePreparing}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
@@ -4750,6 +4849,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 className="rounded-none border-border bg-background/80 text-foreground hover:bg-muted"
                 onClick={downloadSharePreview}
+                disabled={!sharePreview || sharePending}
               >
                 <Download className="mr-2 size-4" />
                 {messages.downloadImage}
@@ -4758,6 +4858,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 className="rounded-none border-border bg-background/80 text-foreground hover:bg-muted"
                 onClick={copySharePreview}
+                disabled={!sharePreview || sharePending}
               >
                 <Copy className="mr-2 size-4" />
                 {messages.copyImage}
@@ -4766,6 +4867,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 <Button
                   className="rounded-none border-transparent bg-brand text-brand-foreground shadow-[0_2px_10px_color-mix(in_srgb,var(--brand)_38%,transparent)] hover:bg-brand/90"
                   onClick={shareSystemPreview}
+                  disabled={!sharePreview || sharePending}
                 >
                   <Share2 className="mr-2 size-4" />
                   {messages.shareToApps}

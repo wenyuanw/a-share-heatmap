@@ -72,19 +72,24 @@ export function addShareBackground(
   const availableTitleWidth = source.width - (branding.logo ? logoSize + logoGap : 0);
   const fontFamily = 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
 
-  context.textBaseline = "middle";
+  context.textBaseline = "alphabetic";
   context.font = `500 ${12 * unit}px ${fontFamily}`;
   const measuredTitleWidth = context.measureText(branding.title).width;
   const titleScale = Math.min(1, availableTitleWidth / Math.max(1, measuredTitleWidth));
   context.font = `500 ${12 * unit * titleScale}px ${fontFamily}`;
+  // Center the visible glyphs, not the font's em box (especially for mixed CJK/Latin text).
+  const titleMetrics = context.measureText(branding.title);
+  const titleBaseline = titleY
+    + (titleMetrics.actualBoundingBoxAscent - titleMetrics.actualBoundingBoxDescent) / 2;
   const brandLeft = padding;
   if (branding.logo) {
     context.drawImage(branding.logo, brandLeft, titleY - logoSize / 2, logoSize, logoSize);
   }
   context.textAlign = "left";
   context.fillStyle = "#c8cdd3";
-  context.fillText(branding.title, brandLeft + (branding.logo ? logoSize + logoGap : 0), titleY);
+  context.fillText(branding.title, brandLeft + (branding.logo ? logoSize + logoGap : 0), titleBaseline);
 
+  context.textBaseline = "middle";
   context.textAlign = "center";
   context.font = `400 ${10 * unit}px ${fontFamily}`;
   context.fillStyle = "#a4a9b1";
