@@ -30,21 +30,21 @@ import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: `功能介绍 | ${siteConfig.name}`,
+  title: `功能介绍：自选股、板块筛选与多周期行情 | ${siteConfig.name}`,
   description:
     "A 股市场热力图（A 股大盘云图 / Treemap）功能一览：全市场云图、多市场范围、自选热力图、板块筛选、多周期表现、截图分享、WebMCP 实验支持，开源免费并支持一键部署。",
   alternates: {
     canonical: "/features",
   },
   openGraph: {
-    title: `功能介绍 | ${siteConfig.name}`,
+    title: `功能介绍：自选股、板块筛选与多周期行情 | ${siteConfig.name}`,
     description:
       "全市场云图、自选热力图、板块筛选、多周期表现…… 了解这张 A 股热力图的全部能力。",
     url: "/features",
     images: [{ url: siteConfig.ogImage, width: 1200, height: 630 }],
   },
   twitter: {
-    title: `功能介绍 | ${siteConfig.name}`,
+    title: `功能介绍：自选股、板块筛选与多周期行情 | ${siteConfig.name}`,
     description: "全市场云图、自选热力图、板块筛选、多周期表现…… 了解这张 A 股热力图的全部能力。",
     images: [siteConfig.ogImage],
   },

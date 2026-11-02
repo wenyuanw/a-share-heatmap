@@ -8,21 +8,21 @@ import { getPosts } from "@/lib/blog";
 import { siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: `博客 | ${siteConfig.name}`,
+  title: `热力图使用心得、复盘方法与功能介绍 | ${siteConfig.name}`,
   description:
-    "A 股市场热力图的博客：功能介绍、使用心得与产品思考，持续更新。",
+    "分享 A 股市场热力图的使用心得与盘后复盘方法，涵盖读图入门、自选股管理、板块观察、自定义配色及 WebMCP 浏览器 AI 功能，结合操作示例帮助你用大盘云图观察市场、整理复盘思路。",
   alternates: {
     canonical: "/whats-new",
   },
   openGraph: {
-    title: `博客 | ${siteConfig.name}`,
-    description: "功能介绍、使用心得与产品思考，持续更新。",
+    title: `热力图使用心得、复盘方法与功能介绍 | ${siteConfig.name}`,
+    description: "分享 A 股市场热力图的使用心得与盘后复盘方法，涵盖读图入门、自选股管理、板块观察、自定义配色及 WebMCP 浏览器 AI 功能，结合操作示例帮助你用大盘云图观察市场、整理复盘思路。",
     url: "/whats-new",
     images: [{ url: siteConfig.ogImage, width: 1200, height: 630 }],
   },
   twitter: {
-    title: `博客 | ${siteConfig.name}`,
-    description: "功能介绍、使用心得与产品思考，持续更新。",
+    title: `热力图使用心得、复盘方法与功能介绍 | ${siteConfig.name}`,
+    description: "分享 A 股市场热力图的使用心得与盘后复盘方法，涵盖读图入门、自选股管理、板块观察、自定义配色及 WebMCP 浏览器 AI 功能，结合操作示例帮助你用大盘云图观察市场、整理复盘思路。",
     images: [siteConfig.ogImage],
   },
 };

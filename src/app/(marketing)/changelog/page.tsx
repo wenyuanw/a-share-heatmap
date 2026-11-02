@@ -9,21 +9,21 @@ import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: `更新日志 | ${siteConfig.name}`,
+  title: `更新日志：新功能、体验优化与问题修复 | ${siteConfig.name}`,
   description:
-    "A 股市场热力图的迭代记录：新功能、优化与修复按时间倒序整理，持续更新中。",
+    "查看 A 股市场热力图的更新记录，按时间了解市场视图、自选股、板块筛选、截图分享与 AI 功能的迭代，以及交互体验优化和行情展示问题修复，快速掌握每次更新带来的变化。",
   alternates: {
     canonical: "/changelog",
   },
   openGraph: {
-    title: `更新日志 | ${siteConfig.name}`,
-    description: "新功能、优化与修复按时间倒序整理，持续更新中。",
+    title: `更新日志：新功能、体验优化与问题修复 | ${siteConfig.name}`,
+    description: "查看 A 股市场热力图的更新记录，按时间了解市场视图、自选股、板块筛选、截图分享与 AI 功能的迭代，以及交互体验优化和行情展示问题修复，快速掌握每次更新带来的变化。",
     url: "/changelog",
     images: [{ url: siteConfig.ogImage, width: 1200, height: 630 }],
   },
   twitter: {
-    title: `更新日志 | ${siteConfig.name}`,
-    description: "新功能、优化与修复按时间倒序整理，持续更新中。",
+    title: `更新日志：新功能、体验优化与问题修复 | ${siteConfig.name}`,
+    description: "查看 A 股市场热力图的更新记录，按时间了解市场视图、自选股、板块筛选、截图分享与 AI 功能的迭代，以及交互体验优化和行情展示问题修复，快速掌握每次更新带来的变化。",
     images: [siteConfig.ogImage],
   },
 };
