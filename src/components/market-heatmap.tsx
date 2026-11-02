@@ -188,13 +188,13 @@ import {
 } from "@/components/heatmap/canvas-text";
 import {
   canvasToBlob,
-  drawShareLogoRaster,
   loadShareLogoRaster,
   readQuoteStream,
   useIsMobile,
   usePollWhileVisible,
 } from "@/components/heatmap/stream";
 import { clamp } from "@/lib/utils";
+import { addShareBackground } from "@/components/heatmap/share-background";
 import {
   type BoardRect,
   type ChangeRangeFilter,
@@ -210,6 +210,7 @@ import {
   type QuoteLoadProgress,
   type QuoteMap,
   type ScreenshotPreview,
+  type ShareLogoRaster,
   type SettingsTab,
   type StockRect,
   type SubBoardRect,
@@ -293,7 +294,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [sharePreview, setSharePreview] = useState<ScreenshotPreview | null>(null);
+  const [sharePreviews, setSharePreviews] = useState<{
+    plain: ScreenshotPreview;
+    background: ScreenshotPreview;
+  } | null>(null);
+  const [shareBackgroundEnabled, setShareBackgroundEnabled] = useState(true);
+  const sharePreview = sharePreviews
+    ? sharePreviews[shareBackgroundEnabled ? "background" : "plain"]
+    : null;
   const [sharePending, setSharePending] = useState(false);
 
   const [hoveredStockCode, setHoveredStockCode] = useState<string | null>(null);
@@ -1122,11 +1130,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
 
   useEffect(() => {
     return () => {
-      if (sharePreview) {
-        URL.revokeObjectURL(sharePreview.url);
+      if (sharePreviews) {
+        URL.revokeObjectURL(sharePreviews.plain.url);
+        URL.revokeObjectURL(sharePreviews.background.url);
       }
     };
-  }, [sharePreview]);
+  }, [sharePreviews]);
 
   useEffect(() => {
     function stopPan() {
@@ -3053,8 +3062,18 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     }
 
     setSharePending(true);
+    let logoRaster: ShareLogoRaster | null = null;
 
     try {
+      // Freeze the chart before loading assets so both variants share one snapshot.
+      const snapshotCanvas = document.createElement("canvas");
+      snapshotCanvas.width = sourceCanvas.width;
+      snapshotCanvas.height = sourceCanvas.height;
+      const snapshotContext = snapshotCanvas.getContext("2d");
+      if (!snapshotContext) {
+        throw new Error("Snapshot context unavailable");
+      }
+      snapshotContext.drawImage(sourceCanvas, 0, 0);
       const pixelRatio = sourceCanvas.width / Math.max(1, canvasSize.width);
       const baseWidth = Math.max(1, canvasSize.width);
       const cssFontPx = clamp(baseWidth * 0.0085, 9, 11);
@@ -3078,20 +3097,25 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       background.addColorStop(1, isLightMode ? heatmapCanvasThemes.light.backgroundEnd : "#0f1319");
       context.fillStyle = background;
       context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-      context.drawImage(sourceCanvas, horizontalPadding, topPadding);
+      context.drawImage(snapshotCanvas, horizontalPadding, topPadding);
 
       let domainStartX = horizontalPadding;
       try {
-        const logoRaster = await loadShareLogoRaster();
+        logoRaster = await loadShareLogoRaster();
+      } catch {
+        /* optional: share without logo if asset fails */
+      }
+      const logoImage = logoRaster
+        ? logoRaster.kind === "bitmap" ? logoRaster.bitmap : logoRaster.image
+        : undefined;
+      if (logoImage) {
         const logoSize = Math.min(
           Math.max(fontPx * 1.55, topPadding * 0.32),
           topPadding * 0.68
         );
         const logoY = (topPadding - logoSize) / 2;
-        drawShareLogoRaster(context, logoRaster, horizontalPadding, logoY, logoSize, logoSize);
+        context.drawImage(logoImage, horizontalPadding, logoY, logoSize, logoSize);
         domainStartX = horizontalPadding + logoSize + fontPx * 0.65;
-      } catch {
-        /* optional: share without logo if asset fails */
       }
 
       const shareTitle =
@@ -3128,17 +3152,22 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       context.fillText(shareTitle, rightEdge, footerY);
       context.restore();
 
-      const blob = await canvasToBlob(exportCanvas);
-      const url = URL.createObjectURL(blob);
+      // Encode both versions of this snapshot so toggling never captures newer quotes.
+      const [blob, backgroundBlob] = await Promise.all([
+        canvasToBlob(exportCanvas),
+        canvasToBlob(addShareBackground(snapshotCanvas, pixelRatio, {
+          title: messages.title,
+          subtitle: `${getPeriodLabel(messages, period)}  ·  ${formatShareTimestamp(updatedAt)}`,
+          logo: logoImage,
+        })),
+      ]);
       const stamp = updatedAt ? updatedAt.replace(/[:T]/g, "-").slice(0, 19) : Date.now().toString();
       const filename = `ashare-heatmap-${market}-${period}-${stamp}.png`;
 
-      setSharePreview((current) => {
-        if (current) {
-          URL.revokeObjectURL(current.url);
-        }
-
-        return { url, filename, blob };
+      setShareBackgroundEnabled(true);
+      setSharePreviews({
+        plain: { url: URL.createObjectURL(blob), filename, blob },
+        background: { url: URL.createObjectURL(backgroundBlob), filename, blob: backgroundBlob },
       });
     } catch {
       toast.error(messages.shareFailed, {
@@ -3146,6 +3175,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         duration: 3200,
       });
     } finally {
+      if (logoRaster?.kind === "bitmap") {
+        logoRaster.bitmap.close();
+      }
       setSharePending(false);
     }
   }, [canvasSize.width, isLightMode, market, messages, period, updatedAt]);
@@ -3321,12 +3353,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   ]);
 
   const closeSharePreview = useCallback(() => {
-    setSharePreview((current) => {
-      if (current) {
-        URL.revokeObjectURL(current.url);
-      }
-      return null;
-    });
+    setSharePreviews(null);
   }, []);
 
   useEffect(() => {
@@ -4677,18 +4704,34 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       {sharePreview && (
         <div className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-2 backdrop-blur-sm sm:p-3">
           <div className="flex max-h-[min(96vh,100%)] w-full max-w-[min(96vw,90rem)] flex-col border border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
                 <h3 className="text-base font-semibold">{messages.sharePreviewTitle}</h3>
               </div>
-              <button
-                type="button"
-                onClick={closeSharePreview}
-                className="inline-flex size-9 items-center justify-center border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={messages.closePreview}
-              >
-                <X className="size-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                  {messages.shareBackground}
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={shareBackgroundEnabled}
+                    onChange={(event) => setShareBackgroundEnabled(event.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="relative h-5 w-9 shrink-0 rounded-full bg-muted-foreground/35 transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={closeSharePreview}
+                  className="inline-flex size-9 items-center justify-center border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={messages.closePreview}
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
             </div>
 
             <div className={cn("min-h-0 flex-1 overflow-auto p-3 sm:p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}>
