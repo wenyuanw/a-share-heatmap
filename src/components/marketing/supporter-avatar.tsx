@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,17 @@ export function SupporterAvatar({ name, url, icon }: SupporterAvatarProps) {
   }
 
   const loaded = source !== undefined && loadedSource === source;
+  const imageRef = useCallback((image: HTMLImageElement | null) => {
+    // SSR images can finish before hydration attaches the load/error handlers.
+    if (!source || !image?.complete) return;
+
+    if (image.naturalWidth > 0) {
+      setLoadedSource(source);
+    } else {
+      setLoadedSource(null);
+      setFailedSource(source);
+    }
+  }, [source]);
 
   return (
     <span
@@ -42,6 +53,7 @@ export function SupporterAvatar({ name, url, icon }: SupporterAvatarProps) {
       {source && failedSource !== source && (
         <img
           key={source}
+          ref={imageRef}
           src={source}
           alt=""
           width={32}
