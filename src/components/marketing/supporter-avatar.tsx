@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 type SupporterAvatarProps = {
   name: string;
   url?: string;
@@ -29,7 +31,12 @@ export function SupporterAvatar({ name, url, icon }: SupporterAvatarProps) {
   return (
     <span
       aria-hidden
-      className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand/25 to-brand/10 text-sm font-semibold text-brand"
+      className={cn(
+        "relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border text-base font-semibold",
+        loaded
+          ? "border-black/10 bg-white shadow-sm dark:border-white/15"
+          : "border-border/70 bg-muted/50 text-muted-foreground",
+      )}
     >
       {!loaded && initial}
       {source && failedSource !== source && (
@@ -37,8 +44,8 @@ export function SupporterAvatar({ name, url, icon }: SupporterAvatarProps) {
           key={source}
           src={source}
           alt=""
-          width={28}
-          height={28}
+          width={32}
+          height={32}
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
@@ -47,7 +54,7 @@ export function SupporterAvatar({ name, url, icon }: SupporterAvatarProps) {
             setLoadedSource(null);
             setFailedSource(source);
           }}
-          className={`absolute size-7 object-contain ${loaded ? "opacity-100" : "opacity-0"}`}
+          className={`absolute size-8 object-contain ${loaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
     </span>
