@@ -177,7 +177,7 @@ pnpm refresh:data  # 校验通过后更新行情、行业映射和上市状态�
 
 - [laojuelv.com](https://laojuelv.com)
 - [newkeeb.com](https://newkeeb.com)
-- [晾衣绳便签](https://www.leelei-ai.com/)
+- [晾衣绳便签](https://www.clothesline-notes.com/)
 - SWQ、LZ、Gin 等群友
 
 <!-- supporters:end -->
