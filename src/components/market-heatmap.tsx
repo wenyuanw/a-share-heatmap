@@ -4612,7 +4612,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   aria-pressed={thumbnailMode}
                   title={messages.thumbnailModeLabel}
                   className={cn(
-                    "hidden size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand md:inline-flex",
+                    "inline-flex size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                     thumbnailMode
                       ? "text-brand hover:bg-brand/12 focus-visible:bg-brand/12"
                       : isLightMode
