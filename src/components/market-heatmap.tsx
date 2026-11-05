@@ -71,7 +71,6 @@ import {
   getBundledSnapshotTreemap,
   type HeatmapPeriodKey,
   type HeatmapUniverse,
-  type MarketDataSource,
   type MarketKey,
   type MarketOverviewResponse,
   type TreemapResponse,
@@ -84,6 +83,7 @@ import {
   type WatchlistItem,
 } from "@/lib/watchlist";
 import { useHeatmapWebMcp } from "@/hooks/use-heatmap-webmcp";
+import { useHeatmapViewData } from "@/hooks/use-heatmap-view-data";
 import { GitHubMark } from "@/components/heatmap/github-mark";
 import { InspectorHeaderSparkline, InspectorSortControls } from "@/components/heatmap/inspector-parts";
 import { MobileStockSheet } from "@/components/heatmap/mobile-stock-sheet";
@@ -207,7 +207,6 @@ import {
   type MarketSummary,
   type PendingQuoteCommit,
   type PriceColorMode,
-  type QuoteLoadProgress,
   type QuoteMap,
   type ScreenshotPreview,
   type ShareLogoRaster,
@@ -260,6 +259,19 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const [market, setMarket] = useState<HeatmapUniverse>("all");
   const [period, setPeriod] = useState<HeatmapPeriodKey>("day");
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const watchlistCodes = useMemo(() => watchlist.map((item) => item.code), [watchlist]);
+  const isWatchlist = market === watchlistUniverseKey;
+  const quoteQueryKey = `${market}:${period}:${isWatchlist ? watchlistCodes.join(",") : ""}`;
+  const {
+    treemapData, setTreemapData,
+    quotes, setQuotes,
+    settledQuotes, setSettledQuotes,
+    quoteLoadProgress, setQuoteLoadProgress,
+    dataSource, setDataSource,
+    updatedAt, setUpdatedAt,
+    loading, setLoading,
+    error, setError,
+  } = useHeatmapViewData(quoteQueryKey);
   const [boardFilter, setBoardFilter] = useState<string[]>([]);
   const [trendFilter, setTrendFilter] = useState(allTrendsValue);
   const [changeRangeFilter, setChangeRangeFilter] = useState<ChangeRangeFilter>(emptyChangeRangeFilter);
@@ -273,19 +285,11 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const heatmapBorders = heatmapBordersUrlOverride ?? heatmapBordersPreference;
   const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(defaultRefreshIntervalSeconds);
   const [marketSummaries, setMarketSummaries] = useState<Partial<Record<MarketKey, MarketSummary>>>({});
-  const [treemapData, setTreemapData] = useState<TreemapResponse | null>(null);
-  const [quotes, setQuotes] = useState<QuoteMap>({});
-  const [settledQuotes, setSettledQuotes] = useState<QuoteMap>({});
-  const [quoteLoadProgress, setQuoteLoadProgress] = useState<QuoteLoadProgress | null>(null);
-  const [dataSource, setDataSource] = useState<MarketDataSource | null>(null);
   // The bundled sample snapshot is fetched once on mount and reused as an instant
   // pre-preference fallback so the very first render can already paint a full Canvas.
   const [initialSnapshot] = useState<TreemapResponse | null>(() => getBundledSnapshotTreemap());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const periodDataUnavailable = error === periodDataUnavailableCode;
   const [refreshRequestId, setRefreshRequestId] = useState(0);
-  const [updatedAt, setUpdatedAt] = useState("");
   // Set once the Canvas has painted the bundled sample — from then on the sample
   // stays visible instead of being masked by the full-screen loading overlay.
   const [samplePainted, setSamplePainted] = useState(false);;
@@ -797,9 +801,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     });
   }, []);
 
-  const watchlistCodes = useMemo(() => watchlist.map((item) => item.code), [watchlist]);
   const watchlistCodeSet = useMemo(() => new Set(watchlistCodes), [watchlistCodes]);
-  const isWatchlist = market === watchlistUniverseKey;
 
   const clearScheduledQuoteCommit = useCallback(() => {
     if (quoteCommitTimerRef.current !== null) {
@@ -830,7 +832,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       setUpdatedAt(pending.updatedAt);
     }
     setDataSource((current) => (current === "direct" ? current : "stale"));
-  }, []);
+  }, [setDataSource, setQuoteLoadProgress, setQuotes, setUpdatedAt]);
 
   const scheduleQuoteCommit = useCallback(
     (immediate = false) => {
@@ -862,55 +864,24 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   );
 
   const fetchTreemap = useCallback(
-    async (nextMarket: HeatmapUniverse, nextPeriod: HeatmapPeriodKey, codes: string[]) => {
+    async (
+      nextMarket: HeatmapUniverse,
+      nextPeriod: HeatmapPeriodKey,
+      codes: string[],
+      signal: AbortSignal
+    ) => {
+      const params = new URLSearchParams({ period: nextPeriod });
       if (nextMarket === watchlistUniverseKey) {
-        if (codes.length === 0) {
-          setTreemapData(createEmptyWatchlistTreemap(nextPeriod));
-          setQuotes({});
-          setSettledQuotes({});
-          setQuoteLoadProgress(null);
-          setUpdatedAt("");
-          setDataSource(null);
-          return;
-        }
-
-        const params = new URLSearchParams({
-          period: nextPeriod,
-          codes: codes.join(","),
-        });
-        const response = await fetch(`/api/heatmap/treemap?${params.toString()}`);
-        if (!response.ok) {
-          if (response.status === 503) throw new Error(periodDataUnavailableCode);
-          throw new Error(messages.errorLoad);
-        }
-
-        const payload = (await response.json()) as TreemapResponse;
-        setTreemapData(payload);
-        if (payload.source === "fallback") {
-          setUpdatedAt((current) => current || payload.updatedAt);
-          setDataSource((current) => current ?? payload.source);
-        } else {
-          setUpdatedAt(payload.updatedAt);
-          setDataSource(payload.source);
-        }
-        return;
+        params.set("codes", codes.join(","));
+      } else {
+        params.set("market", nextMarket);
       }
-
-      const response = await fetch(`/api/heatmap/treemap?market=${nextMarket}&period=${nextPeriod}`);
+      const response = await fetch(`/api/heatmap/treemap?${params.toString()}`, { signal });
       if (!response.ok) {
         if (response.status === 503) throw new Error(periodDataUnavailableCode);
         throw new Error(messages.errorLoad);
       }
-
-      const payload = (await response.json()) as TreemapResponse;
-      setTreemapData(payload);
-      if (payload.source === "fallback") {
-        setUpdatedAt((current) => current || payload.updatedAt);
-        setDataSource((current) => current ?? payload.source);
-      } else {
-        setUpdatedAt(payload.updatedAt);
-        setDataSource(payload.source);
-      }
+      return (await response.json()) as TreemapResponse;
     },
     [messages.errorLoad]
   );
@@ -965,6 +936,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         }
 
         await readQuoteStream(response, (event) => {
+          if (controller.signal.aborted) return;
           if (event.type === "start") {
             setQuoteLoadProgress({ active: true, loadedCount: 0, totalCount: event.totalCount });
             return;
@@ -1031,7 +1003,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
         }
       }
     },
-    [clearScheduledQuoteCommit, flushPendingQuoteCommit, messages.errorLoad, scheduleQuoteCommit]
+    [clearScheduledQuoteCommit, flushPendingQuoteCommit, messages.errorLoad, scheduleQuoteCommit,
+      setDataSource, setError, setQuoteLoadProgress, setQuotes, setSettledQuotes, setUpdatedAt]
   );
 
   const fetchMarketSummaries = useCallback(async (nextPeriod: HeatmapPeriodKey) => {
@@ -1074,7 +1047,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const retryDataLoad = useCallback(() => {
     setError(null);
     setRefreshRequestId((current) => current + 1);
-  }, []);
+  }, [setError]);
 
   useEffect(() => {
     if (inspectorListRef.current) {
@@ -1172,8 +1145,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     };
   }, []);
 
-  const quoteQueryKey = `${market}:${period}:${isWatchlist ? watchlistCodes.join(",") : ""}`;
-
   // Overview includes every market, so switching markets or watchlist entries
   // must retain it. Only a period change invalidates these values.
   useEffect(() => {
@@ -1187,8 +1158,6 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     clearScheduledQuoteCommit();
     pendingQuoteCommitRef.current = null;
     lastQuoteCommitAtRef.current = 0;
-    setQuotes({});
-    setSettledQuotes({});
     setQuoteLoadProgress(null);
 
     return () => {
@@ -1197,18 +1166,17 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       clearScheduledQuoteCommit();
       pendingQuoteCommitRef.current = null;
     };
-  }, [clearScheduledQuoteCommit, quoteQueryKey]);
+  }, [clearScheduledQuoteCommit, quoteQueryKey, setQuoteLoadProgress]);
 
   useEffect(() => {
     if (!preferencesReady) {
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function loadTreemap() {
       setError(null);
-      setTreemapData((current) => current?.period === period ? current : null);
       setHoveredStockCode(null);
       setHoveredBoardName(null);
       setHoveredBoardTitleName(null);
@@ -1230,13 +1198,25 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       setError(null);
 
       try {
-        await fetchTreemap(market, period, watchlistCodes);
+        const payload = await fetchTreemap(market, period, watchlistCodes, controller.signal);
+        if (controller.signal.aborted) return;
+        // An archival fallback must not replace an already loaded live view.
+        setTreemapData((current) =>
+          payload.source === "fallback" && current && current.source !== "fallback" ? current : payload
+        );
+        if (payload.source === "fallback") {
+          setUpdatedAt((current) => current || payload.updatedAt);
+          setDataSource((current) => current ?? payload.source);
+        } else {
+          setUpdatedAt(payload.updatedAt);
+          setDataSource(payload.source);
+        }
       } catch (error) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setError(error instanceof Error ? error.message : messages.errorLoad);
         }
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -1245,9 +1225,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     loadTreemap();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [fetchTreemap, market, messages.errorLoad, period, preferencesReady, refreshRequestId, watchlistCodes]);
+  }, [fetchTreemap, market, messages.errorLoad, period, preferencesReady, refreshRequestId, watchlistCodes,
+    setDataSource, setError, setLoading, setQuotes, setTreemapData, setUpdatedAt]);
 
   usePollWhileVisible(
     useCallback(async () => {
@@ -1259,7 +1240,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       } catch (error) {
         setError(error instanceof Error ? error.message : messages.errorLoad);
       }
-    }, [fetchProgressiveQuotes, market, messages.errorLoad, period, preferencesReady, refreshRequestId, watchlistCodes]),
+    }, [fetchProgressiveQuotes, market, messages.errorLoad, period, preferencesReady, refreshRequestId, setError, watchlistCodes]),
     refreshIntervalSeconds * 1000
   );
 
@@ -1550,7 +1531,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   // always has a full heatmap to paint — even on the very first render.
   const visibleTreemapData = useMemo<TreemapResponse | null>(() => {
     if (!treemapData || treemapData.period !== period) {
-      return initialSnapshot;
+      return market === "all" && period === "day" ? initialSnapshot : null;
     }
 
     if (initialSnapshot && boardFilter.length === 0 && trendFilter === allTrendsValue && !isChangeRangeActive(changeRangeFilter)) {
@@ -1638,7 +1619,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     result = applyTrendFilter(result);
     result = applyChangeRangeFilter(result);
     return result;
-  }, [boardFilter, changeRangeFilter, initialSnapshot, period, settledQuotes, trendFilter, treemapData]);
+  }, [boardFilter, changeRangeFilter, initialSnapshot, market, period, settledQuotes, trendFilter, treemapData]);
 
   const marketOverview = useMemo<MarketOverview | null>(() => {
     if (!visibleTreemapData || periodDataUnavailable || visibleTreemapData.period !== period) {
@@ -4284,9 +4265,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
               </aside>
             )}
 
-            {loading && !samplePainted && <HeatmapLoadingOverlay displayMode={displayMode} messages={messages} />}
+            {loading && (!samplePainted || !visibleTreemapData) && <HeatmapLoadingOverlay displayMode={displayMode} messages={messages} />}
 
-            {samplePainted && dataSource !== "direct" && !error && (
+            {samplePainted && visibleTreemapData && (!treemapData || dataSource === "fallback") && !error && (
               <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
                 <div
                   className={cn(
