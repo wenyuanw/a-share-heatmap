@@ -8,7 +8,7 @@ export function SupporterThanks({
   messages: HeatmapMessages;
 }) {
   return (
-    <section className="border border-amber-600/25 bg-amber-500/5 p-3.5">
+    <section className="border border-border bg-background/70 p-3.5">
       <div className="flex items-start gap-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center border border-amber-600/25 bg-amber-500/10 text-amber-700 dark:text-amber-400">
           <Coffee className="size-4" aria-hidden="true" />
@@ -20,15 +20,15 @@ export function SupporterThanks({
           </p>
         </div>
       </div>
-      <ul className="mt-3 divide-y divide-border border-y border-border">
+      <ul className="mt-3 flex flex-wrap gap-2 pl-12">
         {supporters.map((supporter) => (
-          <li key={supporter.url ?? supporter.name} className="flex items-center py-3 text-sm font-medium">
+          <li key={supporter.url ?? supporter.name} className="flex min-w-0 max-w-full items-center border border-border bg-muted/30 px-2.5 py-1.5 text-[13px] font-medium">
             {supporter.url ? (
               <a
                 href={supporter.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-w-0 items-center gap-1.5 underline decoration-border underline-offset-4 transition-colors hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-offset-4 dark:hover:text-amber-400"
+                className="inline-flex min-w-0 items-center gap-1.5 transition-colors hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-offset-4 dark:hover:text-amber-400"
               >
                 <span className="truncate">{supporter.name}</span>
                 <ExternalLink className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -39,7 +39,7 @@ export function SupporterThanks({
           </li>
         ))}
       </ul>
-      <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">{messages.projectThanksNote}</p>
+      <p className="mt-2.5 pl-12 text-xs leading-relaxed text-muted-foreground">{messages.projectThanksNote}</p>
     </section>
   );
 }

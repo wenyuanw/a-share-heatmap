@@ -295,9 +295,12 @@ export function FilterPanel({
             type="button"
             onClick={onClose}
             aria-label={messages.closeSheet}
-            className="inline-flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={cn(
+              "inline-flex items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              layout === "sheet" ? "size-9" : "size-7"
+            )}
           >
-            <X className="size-3.5" />
+            <X className={layout === "sheet" ? "size-4" : "size-3.5"} />
           </button>
         </div>
       </header>
@@ -327,7 +330,8 @@ export function FilterPanel({
               type="button"
               onClick={onClearBoardFilter}
               className={cn(
-                "flex h-8 w-full items-center px-2.5 text-left text-[12px] font-semibold transition-colors",
+                "flex w-full items-center px-2.5 text-left text-[12px] font-semibold transition-colors",
+                layout === "sheet" ? "h-10" : "h-8",
                 isAllBoardsSelected
                   ? "bg-brand/18 text-foreground"
                   : "bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -338,7 +342,7 @@ export function FilterPanel({
             <div
               className={cn(
                 "overflow-y-auto overscroll-contain border-t border-border",
-                layout === "sheet" ? "max-h-48" : "max-h-40"
+                layout === "sheet" ? "max-h-60" : "max-h-40"
               )}
             >
               {boards.map((board) => {
@@ -347,9 +351,12 @@ export function FilterPanel({
                   <button
                     key={board.code}
                     type="button"
+                    role="checkbox"
+                    aria-checked={isSelected}
                     onClick={() => onToggleBoard(board.name)}
                     className={cn(
-                      "flex h-8 w-full min-w-0 items-center gap-2 px-2.5 text-left transition-colors",
+                      "flex w-full min-w-0 items-center gap-2 px-2.5 text-left transition-colors",
+                      layout === "sheet" ? "h-10" : "h-8",
                       isSelected ? "bg-brand/12 text-foreground" : "text-foreground hover:bg-muted"
                     )}
                   >

@@ -115,6 +115,14 @@ html.heatmap-page-active body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hm-bottom-loader::after {
+    animation: none;
+    background: var(--brand);
+    opacity: 0.6;
+  }
+}
+
 /* ---------------------------------- */
 /* Marketing pages (features, changelog, blog, sponsors) */
 /* ---------------------------------- */

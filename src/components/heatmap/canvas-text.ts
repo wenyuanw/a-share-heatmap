@@ -191,8 +191,9 @@ export function drawSectorHeaderLabel(
   const trendWidth = context.measureText(trendText).width;
   const changeWidth = context.measureText(changeText).width;
   const statsGap = compact ? 5 : 7;
+  // Rise/fall counts stay on top-level sector headers only; sub-sector headers keep just the change.
   const canShowTrend =
-    showStats && available > (compact ? 108 : 148) && trendWidth + changeWidth + statsGap < available * 0.64;
+    showStats && !compact && available > (compact ? 108 : 148) && trendWidth + changeWidth + statsGap < available * 0.64;
   const canShowChange = showStats && available > (compact ? 72 : 96);
   const statsWidth = canShowChange ? changeWidth + (canShowTrend ? trendWidth + statsGap : 0) : 0;
   const nameMaxWidth = Math.max(0, available - (statsWidth > 0 ? statsWidth + (compact ? 6 : 8) : 0));
@@ -433,13 +434,14 @@ export function drawStockLabel(
   const clipWidth = Math.max(0, stock.width - clipPadding * 2);
   const clipHeight = Math.max(0, stock.height - clipPadding * 2);
 
-  if (displayWidth < 16 || displayHeight < 8 || clipWidth <= 2 || clipHeight <= 2) {
+  // Cells too small for legible text stay blank; zooming in reveals their labels.
+  if (displayWidth < 30 || displayHeight < 12 || clipWidth <= 2 || clipHeight <= 2) {
     return;
   }
 
   const hasLargeLabel = displayWidth >= 108 && displayHeight >= 58;
   const hasStackedLabel = displayWidth >= 28 && displayHeight >= 20;
-  const hasInlineLabel = displayWidth >= 24 && displayHeight >= 10;
+  const hasInlineLabel = displayWidth >= 30 && displayHeight >= 12;
   const titleWeight = highlighted ? 800 : 700;
   const detailWeight = highlighted ? 750 : 650;
 
@@ -596,28 +598,6 @@ export function drawStockLabel(
         );
       }
       return;
-    }
-
-    if (displayWidth >= 18 && displayHeight >= 8) {
-      const fontSize = clamp(Math.floor(displayHeight * 0.72), 6, 9) * screenUnit;
-
-      context.textAlign = "left";
-      context.textBaseline = "middle";
-      context.font = heatmapFont(detailWeight, fontSize);
-      const fittedName = fitTextToWidth(context, stock.name, clipWidth);
-
-      if (fittedName) {
-        drawClippedText(
-          context,
-          fittedName,
-          stock.x + textInsetX,
-          stock.y + stock.height / 2 + fontSize * 0.06,
-          stock.x + clipPadding,
-          stock.y + clipPadding,
-          clipWidth,
-          clipHeight
-        );
-      }
     }
   } finally {
     context.restore();

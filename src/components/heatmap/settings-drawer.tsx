@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Bot, Check, ChevronDown, Coffee, Copy, ExternalLink, Info, Keyboard, Mail, Megaphone, Moon, Palette, Star, Sun, X } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +22,90 @@ import { RewardImage } from "./reward-image";
 import { SupporterThanks } from "./supporter-thanks";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HeatThemeSettingsPanel } from "./theme-settings-panel";
+
+/** One setting per row: label and hint on the left, control on the right (stacked on mobile). */
+function SettingRow({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2 py-3 first:pt-0 md:flex-row md:items-center md:justify-between md:gap-8 md:py-3.5">
+      <div className="min-w-0 md:max-w-[26rem]">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {hint && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </section>
+  );
+}
+
+/** A row in the project tab: icon, title and description, with the link on the right on desktop. */
+function ProjectRow({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2 p-3.5 md:flex-row md:items-center md:gap-6">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <span className="inline-flex size-9 shrink-0 items-center justify-center border border-border bg-muted/40 text-foreground">
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="min-w-0 pl-12 md:shrink-0 md:pl-0">{children}</div>
+    </section>
+  );
+}
+
+function SegmentedControl<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: ReactNode }>;
+  onChange: (value: T) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn("grid w-full gap-1 border border-border bg-background/60 p-1 md:w-72", className)}
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={active}
+            className={cn(
+              "flex min-h-9 min-w-0 items-center justify-center gap-1.5 px-2 py-1.5 text-center text-[13px] font-semibold leading-tight transition-colors md:min-h-8",
+              active
+                ? "bg-brand/18 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--brand)_65%,transparent)]"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function SettingsDrawer({
   open,
@@ -104,6 +188,7 @@ export function SettingsDrawer({
   // 桌面端悬停整张卡片预览、点击放大；触屏设备默认在卡片内展开。
   // 解析前（null）按未展开渲染，避免首帧先展开再收起的闪动。
   const rewardPanelId = useId();
+  const titleId = useId();
   const touchOnly = hoverCapable === false;
   const [rewardInlineOpen, setRewardInlineOpen] = useState(false);
   const [rewardPreviewOpen, setRewardPreviewOpen] = useState(false);
@@ -307,15 +392,20 @@ export function SettingsDrawer({
   );
 
   return (
-    <div className="absolute inset-0 z-[10010] flex items-end justify-center bg-black/62 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div
+      className="absolute inset-0 z-[10010] flex items-end justify-center bg-black/62 backdrop-blur-sm md:items-center md:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
       <button type="button" className="absolute inset-0" aria-label={messages.closeSheet} onClick={onClose} />
-      <section className="relative flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-lg border border-b-0 border-border bg-card text-card-foreground shadow-[0_-24px_100px_rgba(0,0,0,0.48)]">
-        <div className="flex items-center justify-center pt-2">
+      <section className="relative flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-lg border border-b-0 border-border bg-card text-card-foreground shadow-[0_-24px_100px_rgba(0,0,0,0.48)] md:h-[min(46rem,100%)] md:max-w-[58rem] md:rounded-lg md:border-b md:shadow-[0_24px_100px_rgba(0,0,0,0.48)]">
+        <div className="flex items-center justify-center pt-2 md:hidden">
           <span className="h-1 w-10 rounded-full bg-muted-foreground/40" aria-hidden />
         </div>
         <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold leading-tight">{messages.settingsTitle}</h2>
+            <h2 id={titleId} className="text-lg font-semibold leading-tight">{messages.settingsTitle}</h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{messages.settingsDescription}</p>
           </div>
           <button
@@ -353,267 +443,157 @@ export function SettingsDrawer({
             })}
           </nav>
 
-          <div className={cn("min-h-0 p-3 md:p-4", tab === "watchlist" ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
+          <div className={cn("min-h-0 p-3 md:px-6 md:py-5", tab === "watchlist" ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
             {tab === "appearance" && (
-              <div className="space-y-4 md:space-y-6">
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.languageLabel}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onLocaleChange("zh")}
-                      aria-pressed={locale === "zh"}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        locale === "zh"
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.languageZh}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onLocaleChange("en")}
-                      aria-pressed={locale === "en"}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        locale === "en"
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.languageEn}
-                    </button>
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.displayMode}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onDisplayModeChange("light")}
-                      aria-pressed={displayMode === "light"}
-                      className={cn(
-                        "flex items-center gap-2 border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        displayMode === "light"
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Sun className="size-4 shrink-0" />
-                      {messages.lightMode}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDisplayModeChange("dark")}
-                      aria-pressed={displayMode === "dark"}
-                      className={cn(
-                        "flex items-center gap-2 border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        displayMode === "dark"
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Moon className="size-4 shrink-0" />
-                      {messages.darkMode}
-                    </button>
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.headerTrendStatsLabel}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onHeaderTrendStatsChange(false)}
-                      aria-pressed={!headerTrendStats}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        !headerTrendStats
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.headerTrendStatsOff}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onHeaderTrendStatsChange(true)}
-                      aria-pressed={headerTrendStats}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        headerTrendStats
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.headerTrendStatsOn}
-                    </button>
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.heatmapBordersLabel}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onHeatmapBordersChange(false)}
-                      aria-pressed={!heatmapBorders}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        !heatmapBorders
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.heatmapBordersOff}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onHeatmapBordersChange(true)}
-                      aria-pressed={heatmapBorders}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                        heatmapBorders
-                          ? "border-brand/70 bg-brand/15 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {messages.heatmapBordersOn}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {messages.heatmapBordersHint}
-                  </p>
-                </section>
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.settingsRefreshIntervalLabel}</h3>
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={minRefreshIntervalSeconds}
-                      max={maxRefreshIntervalSeconds}
-                      step={1}
-                      value={intervalDraft}
-                      onChange={(event) => setIntervalDraft(event.target.value)}
-                      onBlur={commitRefreshInterval}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      aria-label={messages.settingsRefreshIntervalLabel}
-                      className="w-24 border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground transition-colors outline-none focus:border-brand/70 focus:ring-2 focus:ring-brand/30 md:py-3"
+              <div className="space-y-4 md:space-y-5">
+                <div className="divide-y divide-border/60">
+                  <SettingRow title={messages.languageLabel}>
+                    <SegmentedControl
+                      label={messages.languageLabel}
+                      value={locale}
+                      onChange={onLocaleChange}
+                      options={[
+                        { value: "zh", label: messages.languageZh },
+                        { value: "en", label: messages.languageEn },
+                      ]}
                     />
-                    <span className="text-xs text-muted-foreground">
-                      {messages.settingsRefreshIntervalUnit}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {messages.settingsRefreshIntervalHint.replace(
+                  </SettingRow>
+
+                  <SettingRow title={messages.displayMode}>
+                    <SegmentedControl
+                      label={messages.displayMode}
+                      value={displayMode}
+                      onChange={onDisplayModeChange}
+                      options={[
+                        {
+                          value: "light",
+                          label: (
+                            <>
+                              <Sun className="size-3.5 shrink-0" />
+                              {messages.lightMode}
+                            </>
+                          ),
+                        },
+                        {
+                          value: "dark",
+                          label: (
+                            <>
+                              <Moon className="size-3.5 shrink-0" />
+                              {messages.darkMode}
+                            </>
+                          ),
+                        },
+                      ]}
+                    />
+                  </SettingRow>
+
+                  <SettingRow title={messages.themeColor}>
+                    <SegmentedControl
+                      label={messages.themeColor}
+                      value={themeColor}
+                      onChange={onThemeColorChange}
+                      options={(Object.keys(themeColors) as ThemeColorKey[]).map((key) => ({
+                        value: key,
+                        label: (
+                          <>
+                            <span
+                              className="size-3 shrink-0 rounded-full border border-white/20"
+                              style={{ backgroundColor: themeColors[key].swatch }}
+                            />
+                            {themeLabels[key]}
+                          </>
+                        ),
+                      }))}
+                    />
+                  </SettingRow>
+
+                  <SettingRow title={messages.priceColor}>
+                    <SegmentedControl
+                      label={messages.priceColor}
+                      value={priceColorMode}
+                      onChange={onPriceColorModeChange}
+                      options={[
+                        {
+                          value: "red-rise",
+                          label: <span className="text-red-400">{messages.redRiseGreenFall}</span>,
+                        },
+                        {
+                          value: "green-rise",
+                          label: <span className="text-emerald-400">{messages.greenRiseRedFall}</span>,
+                        },
+                      ]}
+                    />
+                  </SettingRow>
+
+                  <SettingRow title={messages.headerTrendStatsLabel}>
+                    <SegmentedControl
+                      label={messages.headerTrendStatsLabel}
+                      value={headerTrendStats ? "on" : "off"}
+                      onChange={(next) => onHeaderTrendStatsChange(next === "on")}
+                      options={[
+                        { value: "off", label: messages.headerTrendStatsOff },
+                        { value: "on", label: messages.headerTrendStatsOn },
+                      ]}
+                    />
+                  </SettingRow>
+
+                  <SettingRow title={messages.heatmapBordersLabel} hint={messages.heatmapBordersHint}>
+                    <SegmentedControl
+                      label={messages.heatmapBordersLabel}
+                      value={heatmapBorders ? "on" : "off"}
+                      onChange={(next) => onHeatmapBordersChange(next === "on")}
+                      options={[
+                        { value: "off", label: messages.heatmapBordersOff },
+                        { value: "on", label: messages.heatmapBordersOn },
+                      ]}
+                    />
+                  </SettingRow>
+
+                  {!isMobile && (
+                    <SettingRow title={messages.filterOpenModeLabel}>
+                      <SegmentedControl
+                        label={messages.filterOpenModeLabel}
+                        value={filterOpenMode}
+                        onChange={onFilterOpenModeChange}
+                        options={[
+                          { value: "click", label: messages.filterOpenModeClick },
+                          { value: "hover", label: messages.filterOpenModeHover },
+                        ]}
+                      />
+                    </SettingRow>
+                  )}
+
+                  <SettingRow
+                    title={messages.settingsRefreshIntervalLabel}
+                    hint={messages.settingsRefreshIntervalHint.replace(
                       "{min}",
                       String(minRefreshIntervalSeconds)
                     ).replace("{max}", String(maxRefreshIntervalSeconds))}
-                  </p>
-                </section>
-
-                {!isMobile && (
-                  <section>
-                    <h3 className="text-sm font-semibold">{messages.filterOpenModeLabel}</h3>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onFilterOpenModeChange("click")}
-                        aria-pressed={filterOpenMode === "click"}
-                        className={cn(
-                          "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                          filterOpenMode === "click"
-                            ? "border-brand/70 bg-brand/15 text-foreground"
-                            : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        {messages.filterOpenModeClick}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onFilterOpenModeChange("hover")}
-                        aria-pressed={filterOpenMode === "hover"}
-                        className={cn(
-                          "border px-3 py-2 text-left text-sm font-semibold transition-colors md:py-3",
-                          filterOpenMode === "hover"
-                            ? "border-brand/70 bg-brand/15 text-foreground"
-                            : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        {messages.filterOpenModeHover}
-                      </button>
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={minRefreshIntervalSeconds}
+                        max={maxRefreshIntervalSeconds}
+                        step={1}
+                        value={intervalDraft}
+                        onChange={(event) => setIntervalDraft(event.target.value)}
+                        onBlur={commitRefreshInterval}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        aria-label={messages.settingsRefreshIntervalLabel}
+                        className="h-10 w-24 border border-border bg-background px-3 text-sm font-semibold text-foreground transition-colors outline-none focus:border-brand/70 focus:ring-2 focus:ring-brand/30"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {messages.settingsRefreshIntervalUnit}
+                      </span>
                     </div>
-                  </section>
-                )}
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.themeColor}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {(Object.keys(themeColors) as ThemeColorKey[]).map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => onThemeColorChange(key)}
-                        aria-pressed={themeColor === key}
-                        className={cn(
-                          "flex items-center gap-2 border px-3 py-2 text-sm font-medium transition-colors",
-                          themeColor === key
-                            ? "border-brand/70 bg-brand/15 text-foreground"
-                            : "border-border bg-background/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        <span
-                          className="size-4 shrink-0 border border-white/20"
-                          style={{ backgroundColor: themeColors[key].swatch }}
-                        />
-                        {themeLabels[key]}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="text-sm font-semibold">{messages.priceColor}</h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onPriceColorModeChange("red-rise")}
-                      aria-pressed={priceColorMode === "red-rise"}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm transition-colors md:py-3",
-                        priceColorMode === "red-rise"
-                          ? "border-brand/70 bg-brand/15"
-                          : "border-border bg-background/70 hover:bg-muted"
-                      )}
-                    >
-                      <span className="font-semibold text-red-400">{messages.redRiseGreenFall}</span>
-                      <span className="mt-1 block text-xs text-muted-foreground">+2.4% / -1.8%</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPriceColorModeChange("green-rise")}
-                      aria-pressed={priceColorMode === "green-rise"}
-                      className={cn(
-                        "border px-3 py-2 text-left text-sm transition-colors md:py-3",
-                        priceColorMode === "green-rise"
-                          ? "border-brand/70 bg-brand/15"
-                          : "border-border bg-background/70 hover:bg-muted"
-                      )}
-                    >
-                      <span className="font-semibold text-emerald-400">{messages.greenRiseRedFall}</span>
-                      <span className="mt-1 block text-xs text-muted-foreground">+2.4% / -1.8%</span>
-                    </button>
-                  </div>
-                </section>
+                  </SettingRow>
+                </div>
 
                 <HeatThemeSettingsPanel
                   messages={messages}
@@ -654,7 +634,7 @@ export function SettingsDrawer({
                     {messages.settingsShortcutsIntro}
                   </p>
                 </div>
-                <div className="space-y-2">
+                <div className="divide-y divide-border/60 border border-border">
                   {shortcutActionIds.map((action) => {
                     const active = recordingAction === action;
                     return (
@@ -665,10 +645,10 @@ export function SettingsDrawer({
                           setRecordingAction((current) => (current === action ? null : action))
                         }
                         className={cn(
-                          "flex w-full items-center justify-between gap-3 border px-3 py-2.5 text-left transition-colors",
+                          "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors",
                           active
-                            ? "border-brand/70 bg-brand/15"
-                            : "border-border bg-background/70 hover:bg-muted"
+                            ? "bg-brand/15 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--brand)_65%,transparent)]"
+                            : "bg-background/70 hover:bg-muted"
                         )}
                       >
                         <span className="min-w-0 text-sm font-medium text-foreground">
@@ -708,11 +688,11 @@ export function SettingsDrawer({
                 <section>
                   <h3 className="text-sm font-semibold">{messages.helpTitle}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{messages.helpIntro}</p>
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-3 divide-y divide-border/60 border border-border">
                     {helpItems.map((item) => (
                       <div
                         key={item}
-                        className="border border-border bg-background/70 px-3 py-2 text-sm text-muted-foreground"
+                        className="bg-background/70 px-3 py-2.5 text-sm leading-relaxed text-muted-foreground"
                       >
                         {item.replace(/^·\s*/, "")}
                       </div>
@@ -727,8 +707,8 @@ export function SettingsDrawer({
                       <div
                         key={action}
                         className={cn(
-                          "flex items-center justify-between gap-3 bg-background/70 px-3 py-2 text-sm",
-                          index > 0 && "border-t border-border"
+                          "flex items-center justify-between gap-3 bg-background/70 px-3 py-2.5 text-sm",
+                          index > 0 && "border-t border-border/60"
                         )}
                       >
                         <span className="min-w-0 text-muted-foreground">
@@ -848,122 +828,109 @@ export function SettingsDrawer({
             )}
 
             {tab === "project" && (
-              <div className="space-y-4">
-                <section className="border border-border bg-background/70 p-3.5">
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center border border-border bg-muted/40 text-foreground">
-                      <GitHubMark className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold">{messages.githubProject}</h3>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {messages.githubProjectDescription}
-                      </p>
-                      <a
-                        href={githubProjectUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand transition-colors hover:text-brand/80"
-                      >
-                        github.com/wenyuanw/a-share-heatmap
-                        <ExternalLink className="size-3.5 opacity-80" />
-                      </a>
-                    </div>
-                  </div>
-                </section>
+              <div className="space-y-5">
+                <div className="divide-y divide-border/60 border border-border bg-background/70">
+                  <ProjectRow
+                    icon={<GitHubMark className="size-4" />}
+                    title={messages.githubProject}
+                    description={messages.githubProjectDescription}
+                  >
+                    <a
+                      href={githubProjectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex max-w-full items-center gap-1.5 text-[12px] font-semibold text-brand transition-colors hover:text-brand/80"
+                    >
+                      <span className="truncate">github.com/wenyuanw/a-share-heatmap</span>
+                      <ExternalLink className="size-3.5 shrink-0 opacity-80" />
+                    </a>
+                  </ProjectRow>
 
-                <section className="border border-border bg-background/70 p-3.5">
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center border border-border bg-muted/40 text-foreground">
-                      <Mail className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold">{messages.projectAuthorTitle}</h3>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {messages.projectAuthorDescription}
-                      </p>
-                      <a
-                        href={authorMailto}
-                        className="mt-3 inline-flex items-center gap-1.5 font-mono text-[12px] font-semibold text-foreground transition-colors hover:text-brand"
-                      >
-                        {messages.projectAuthorEmail}
-                      </a>
-                    </div>
-                  </div>
-                </section>
+                  <ProjectRow
+                    icon={<Mail className="size-4" />}
+                    title={messages.projectAuthorTitle}
+                    description={messages.projectAuthorDescription}
+                  >
+                    <a
+                      href={authorMailto}
+                      className="inline-flex items-center gap-1.5 font-mono text-[12px] font-semibold text-foreground transition-colors hover:text-brand"
+                    >
+                      {messages.projectAuthorEmail}
+                    </a>
+                  </ProjectRow>
 
-                <section className="border border-border bg-background/70">
-                  <div className="relative p-3.5">
-                    {hoverCapable === true ? (
-                      <TooltipProvider>
-                        <Tooltip open={rewardPreviewOpen && !rewardZoomOpen} onOpenChange={setRewardPreviewOpen}>
-                          <TooltipTrigger asChild>{rewardTrigger}</TooltipTrigger>
-                          <TooltipContent
-                            side={isMobile ? "bottom" : "right"}
-                            align={isMobile ? "start" : "center"}
-                            collisionPadding={16}
-                            className="z-[10020] overflow-y-auto p-3"
-                            style={{
-                              width: "min(320px, calc(100vw - 32px), calc(100dvh - 112px))",
-                              maxHeight: "var(--radix-tooltip-content-available-height)",
-                            }}
-                          >
+                  <section>
+                    <div className="relative p-3.5 transition-colors hover:bg-muted/40">
+                      {hoverCapable === true ? (
+                        <TooltipProvider>
+                          <Tooltip open={rewardPreviewOpen && !rewardZoomOpen} onOpenChange={setRewardPreviewOpen}>
+                            <TooltipTrigger asChild>{rewardTrigger}</TooltipTrigger>
+                            <TooltipContent
+                              side={isMobile ? "bottom" : "right"}
+                              align={isMobile ? "start" : "center"}
+                              collisionPadding={16}
+                              className="z-[10020] overflow-y-auto p-3"
+                              style={{
+                                width: "min(320px, calc(100vw - 32px), calc(100dvh - 112px))",
+                                maxHeight: "var(--radix-tooltip-content-available-height)",
+                              }}
+                            >
+                              <RewardPanel messages={messages} onImageClick={openRewardZoom} />
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : rewardTrigger}
+                      <p className="ml-12 mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {messages.projectSupportDescription}
+                      </p>
+                    </div>
+                    {touchOnly && (
+                      <div id={rewardPanelId} hidden={!rewardInlineOpen} className="border-t border-border px-3.5 py-3">
+                        {rewardInlineOpen && (
+                          <div className="mx-auto w-full max-w-80">
                             <RewardPanel messages={messages} onImageClick={openRewardZoom} />
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : rewardTrigger}
-                    <p className="ml-12 mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {messages.projectSupportDescription}
-                    </p>
-                  </div>
-                  {touchOnly && (
-                    <div id={rewardPanelId} hidden={!rewardInlineOpen} className="border-t border-border px-3.5 py-3">
-                      {rewardInlineOpen && (
-                        <div className="mx-auto w-full max-w-80">
-                          <RewardPanel messages={messages} onImageClick={openRewardZoom} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                </div>
 
                 <SupporterThanks messages={messages} />
 
-                <section className="relative overflow-hidden border border-dashed border-brand/45 bg-brand/8 p-3.5">
-                  <div
-                    className="pointer-events-none absolute -right-6 -top-6 size-24 rotate-12 border border-brand/20 bg-brand/10"
-                    aria-hidden
-                  />
-                  <div className="relative flex items-start gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center border border-brand/40 bg-brand/15 text-brand">
-                      <Megaphone className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-semibold text-foreground">{messages.projectAdTitle}</h3>
-                        <span className="border border-brand/40 bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
-                          OPEN
-                        </span>
+                <section className="border border-dashed border-brand/40 bg-brand/6 p-3.5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center border border-brand/40 bg-brand/15 text-brand">
+                        <Megaphone className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">{messages.projectAdTitle}</h3>
+                          <span className="border border-brand/40 bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
+                            OPEN
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {messages.projectAdDescription}
+                        </p>
                       </div>
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                        {messages.projectAdDescription}
-                      </p>
-                      <a
-                        href={`${authorMailto}?subject=${encodeURIComponent(
-                          locale === "zh" ? "广告位招租咨询" : "Ad slot inquiry"
-                        )}`}
-                        className="mt-3 inline-flex items-center gap-1.5 border border-brand/50 bg-brand/15 px-2.5 py-1.5 text-[12px] font-semibold text-foreground transition-colors hover:bg-brand/25"
-                      >
-                        {messages.projectAdCta}
-                        <Mail className="size-3.5 opacity-80" />
-                      </a>
                     </div>
+                    <a
+                      href={`${authorMailto}?subject=${encodeURIComponent(
+                        locale === "zh" ? "广告位招租咨询" : "Ad slot inquiry"
+                      )}`}
+                      className="ml-12 inline-flex shrink-0 items-center gap-1.5 self-start border border-brand/50 bg-brand/15 px-2.5 py-1.5 text-[12px] font-semibold text-foreground transition-colors hover:bg-brand/25 md:ml-0 md:self-center"
+                    >
+                      {messages.projectAdCta}
+                      <Mail className="size-3.5 opacity-80" />
+                    </a>
                   </div>
                 </section>
-                <section className="border border-border bg-background/70 p-3.5">
+
+                <section>
                   <h3 className="text-sm font-semibold">{messages.sitePagesTitle}</h3>
-                  <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                  <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">
                     {(
                       [
                         ["/features", messages.sitePageFeatures],
@@ -975,7 +942,7 @@ export function SettingsDrawer({
                       <Link
                         key={href}
                         href={href}
-                        className="inline-flex items-center justify-between gap-1.5 border border-border bg-background/60 px-2.5 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+                        className="inline-flex items-center justify-between gap-1.5 border border-border bg-background/70 px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:bg-muted hover:text-foreground"
                       >
                         {label}
                         <ExternalLink className="size-3 shrink-0 opacity-60" />

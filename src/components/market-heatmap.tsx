@@ -280,7 +280,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
   const [sizeMode, setSizeMode] = useState<HeatmapSizeMode>("marketCap");
   const [thumbnailMode, setThumbnailMode] = useState(false);
   const [headerTrendStats, setHeaderTrendStats] = useState(true);
-  const [heatmapBordersPreference, setHeatmapBordersPreference] = useState(true);
+  const [heatmapBordersPreference, setHeatmapBordersPreference] = useState(false);
   const [heatmapBordersUrlOverride, setHeatmapBordersUrlOverride] = useState<boolean | null>(null);
   const heatmapBorders = heatmapBordersUrlOverride ?? heatmapBordersPreference;
   const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(defaultRefreshIntervalSeconds);
@@ -3522,6 +3522,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     !periodDataUnavailable && isWatchlist && treemapData?.period === period && treemapData.stockCount > 0
       ? treemapData.summary.indexChangePct
       : undefined;
+  // Keep the off-screen sidebar out of the tab order and the accessibility tree.
+  const sidebarHidden = isMobile ? !sidebarOpen : desktopSidebarCollapsed;
 
   return (
     <div
@@ -3561,7 +3563,8 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 ? "md:pointer-events-none md:w-0 md:border-transparent md:opacity-0"
                 : "md:w-[148px] md:opacity-100 lg:w-[162px]"
             )}
-            aria-hidden={(!sidebarOpen && isMobile) || (!isMobile && desktopSidebarCollapsed)}
+            aria-hidden={sidebarHidden}
+            inert={sidebarHidden}
           >
             <div
               className={cn(
@@ -3611,7 +3614,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 isEnglish && "px-1.5 py-1 sm:px-1.5"
               )}
             >
-              <div className={cn("mb-1.5 flex items-center justify-between border border-border bg-muted/18 px-1.5 py-1 text-muted-foreground", isEnglish && "mb-1 px-1.5 py-1")}>
+              <div className="mb-1 flex items-center justify-between px-1.5 py-1 text-muted-foreground">
                 <span className={cn("font-semibold uppercase tracking-[0.12em]", isEnglish ? "text-[8.5px]" : "text-[9px]")}>
                   {messages.lastUpdated}
                 </span>
@@ -3626,7 +3629,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   )}
                 </span>
               </div>
-              <div className={cn("space-y-1", isEnglish && "space-y-0.5")}>
+              <div className="space-y-0.5">
                 {marketOptions.map((option) => {
                   const summary = periodDataUnavailable ? undefined : marketSummaries[option];
                   const isActive = market === option;
@@ -3646,7 +3649,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                         isEnglish && "px-1.5 py-1",
                         isActive
                           ? "border-brand/55 bg-brand/12 text-foreground"
-                          : "border-border bg-background hover:bg-muted"
+                          : "border-transparent hover:bg-muted"
                       )}
                     >
                       <span
@@ -3696,7 +3699,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                     isEnglish && "px-1.5 py-1",
                     isWatchlist
                       ? "border-brand/55 bg-brand/12 text-foreground"
-                      : "border-border bg-background hover:bg-muted"
+                      : "border-transparent hover:bg-muted"
                   )}
                 >
                   <span
@@ -3917,12 +3920,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
 
             </div>
 
-            <div className={cn("grid grid-cols-1 gap-1.5 border-t border-border p-1.5", isEnglish && "gap-1 p-[5px]")}>
+            <div className={cn("grid grid-cols-1 gap-0.5 border-t border-border p-1.5", isEnglish && "p-[5px]")}>
               <Button
                 variant="outline"
                 size={isEnglish ? "xs" : "sm"}
                 className={cn(
-                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  "justify-start rounded-none border-transparent bg-transparent text-foreground shadow-none hover:bg-muted dark:border-transparent dark:bg-transparent dark:hover:bg-muted",
                   isEnglish && "min-w-0 px-2 text-[10.5px]"
                 )}
                 onClick={createSharePreview}
@@ -3936,7 +3939,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 size={isEnglish ? "xs" : "sm"}
                 className={cn(
-                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  "justify-start rounded-none border-transparent bg-transparent text-foreground shadow-none hover:bg-muted dark:border-transparent dark:bg-transparent dark:hover:bg-muted",
                   isEnglish && "min-w-0 px-2 text-[10.5px]"
                 )}
                 onClick={resetView}
@@ -3949,7 +3952,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 size={isEnglish ? "xs" : "sm"}
                 className={cn(
-                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  "justify-start rounded-none border-transparent bg-transparent text-foreground shadow-none hover:bg-muted dark:border-transparent dark:bg-transparent dark:hover:bg-muted",
                   isEnglish && "min-w-0 px-2 text-[10.5px]"
                 )}
                 onClick={toggleFullscreen}
@@ -3962,7 +3965,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 size={isEnglish ? "xs" : "sm"}
                 className={cn(
-                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  "justify-start rounded-none border-transparent bg-transparent text-foreground shadow-none hover:bg-muted dark:border-transparent dark:bg-transparent dark:hover:bg-muted",
                   isEnglish && "min-w-0 px-2 text-[10.5px]",
                   settingsOpen && settingsTab === "watchlist" && "border-brand/55 bg-brand/12"
                 )}
@@ -3981,7 +3984,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 variant="outline"
                 size={isEnglish ? "xs" : "sm"}
                 className={cn(
-                  "justify-start rounded-none border-border bg-background/80 text-foreground hover:bg-muted",
+                  "justify-start rounded-none border-transparent bg-transparent text-foreground shadow-none hover:bg-muted dark:border-transparent dark:bg-transparent dark:hover:bg-muted",
                   isEnglish && "min-w-0 px-2 text-[10.5px]"
                 )}
                 onClick={() => {
@@ -3998,7 +4001,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 onClick={() => setDesktopSidebarCollapsed(true)}
                 aria-label={messages.collapseSidebar}
                 title={withShortcutTitle(messages.collapseSidebar, shortcutBindings.sidebar)}
-                className="hidden h-8 items-center justify-center border border-border bg-background/80 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
+                className="hidden h-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -4379,7 +4382,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                     aria-label={messages.expandSidebar}
                     title={withShortcutTitle(messages.expandSidebar, shortcutBindings.sidebar)}
                     className={cn(
-                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                       !desktopSidebarCollapsed && "md:hidden",
                       desktopSidebarCollapsed && "md:inline-flex",
                       isLightMode
@@ -4387,7 +4390,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                         : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                     )}
                   >
-                    {isMobile ? <Menu className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                    {isMobile ? <Menu className="size-4" /> : <ChevronRight className="size-3.5" />}
                   </button>
                 )}
                 <button
@@ -4396,20 +4399,20 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   aria-label={isLightMode ? messages.darkMode : messages.lightMode}
                   title={isLightMode ? messages.darkMode : messages.lightMode}
                   className={cn(
-                    "inline-flex size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand md:hidden",
+                    "inline-flex size-8 md:size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand md:hidden",
                     isLightMode
                       ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
                       : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                   )}
                 >
-                  {isLightMode ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
+                  {isLightMode ? <Moon className="size-4 md:size-3.5" /> : <Sun className="size-4 md:size-3.5" />}
                 </button>
                 <RewardTipTrigger
                   messages={messages}
                   onOpen={openRewardSettings}
                   side="top"
                   className={cn(
-                    "size-7 rounded-full text-muted-foreground focus-visible:text-brand",
+                    "size-8 rounded-full text-muted-foreground focus-visible:text-brand md:size-7",
                     isLightMode
                       ? "hover:bg-muted focus-visible:bg-muted"
                       : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
@@ -4442,7 +4445,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                     aria-pressed={filtersOpen}
                     title={messages.filtersOpen}
                     className={cn(
-                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                       filtersOpen || activeFilterCount > 0
                         ? "text-brand hover:bg-brand/12 focus-visible:bg-brand/12"
                         : isLightMode
@@ -4450,7 +4453,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                           : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                     )}
                   >
-                    <ListFilter className="size-3.5" />
+                    <ListFilter className="size-4 md:size-3.5" />
                   </button>
                   <button
                     type="button"
@@ -4458,13 +4461,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                     aria-label={messages.resetView}
                     title={messages.resetView}
                     className={cn(
-                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                       isLightMode
                         ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
                         : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                     )}
                   >
-                    <RotateCcw className="size-3.5" />
+                    <RotateCcw className="size-4 md:size-3.5" />
                   </button>
                   <button
                     type="button"
@@ -4472,13 +4475,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                     aria-label={messages.enterFullscreen}
                     title={messages.enterFullscreen}
                     className={cn(
-                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                       isLightMode
                         ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
                         : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                     )}
                   >
-                    <Maximize2 className="size-3.5" />
+                    <Maximize2 className="size-4 md:size-3.5" />
                   </button>
                 </div>
 
@@ -4518,13 +4521,13 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   aria-label={messages.githubProject}
                   title={messages.githubProject}
                   className={cn(
-                    "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand md:hidden",
+                    "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand md:hidden",
                     isLightMode
                       ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
                       : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                   )}
                 >
-                  <GitHubMark className="size-3.5 opacity-80" />
+                  <GitHubMark className="size-4 opacity-80" />
                 </a>
 
                 <div className="group relative hidden shrink-0 md:block">
@@ -4537,7 +4540,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                       setSettingsOpen(true);
                     }}
                     className={cn(
-                      "inline-flex size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                      "inline-flex size-8 md:size-7 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                       isLightMode
                         ? "text-muted-foreground hover:bg-muted focus-visible:bg-muted"
                         : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
@@ -4583,7 +4586,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                       : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                   )}
                 >
-                  {isLightMode ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
+                  {isLightMode ? <Moon className="size-4 md:size-3.5" /> : <Sun className="size-4 md:size-3.5" />}
                 </button>
 
                 <button
@@ -4593,7 +4596,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   aria-pressed={thumbnailMode}
                   title={messages.thumbnailModeLabel}
                   className={cn(
-                    "inline-flex size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
+                    "inline-flex size-8 md:size-7 shrink-0 items-center justify-center bg-transparent transition-colors hover:text-brand focus-visible:text-brand",
                     thumbnailMode
                       ? "text-brand hover:bg-brand/12 focus-visible:bg-brand/12"
                       : isLightMode
@@ -4601,7 +4604,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                         : "text-slate-400 hover:bg-white/5 focus-visible:bg-white/5"
                   )}
                 >
-                  <LayoutGrid className="size-3.5" />
+                  <LayoutGrid className="size-4 md:size-3.5" />
                 </button>
 
                 <button
@@ -4610,9 +4613,9 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   disabled={sharePending}
                   aria-label={sharePending ? messages.generatingShareImage : messages.shareToApps}
                   title={withShortcutTitle(messages.shareImage, shortcutBindings.share)}
-                  className="inline-flex items-center gap-1 rounded-[14px] bg-brand px-1.5 py-1 text-[10px] font-semibold text-brand-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--brand)_38%,transparent)] transition-all hover:bg-brand/90 hover:shadow-[0_4px_12px_color-mix(in_srgb,var(--brand)_48%,transparent)] disabled:opacity-60 sm:px-2 sm:text-[11px]"
+                  className="inline-flex items-center justify-center gap-1 rounded-[14px] bg-brand px-1.5 py-1 text-[10px] max-sm:size-8 max-sm:rounded-full max-sm:p-0 font-semibold text-brand-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--brand)_38%,transparent)] transition-all hover:bg-brand/90 hover:shadow-[0_4px_12px_color-mix(in_srgb,var(--brand)_48%,transparent)] disabled:opacity-60 sm:px-2 sm:text-[11px]"
                 >
-                  <Share2 className="size-3" />
+                  <Share2 className="size-3.5 sm:size-3" />
                   <span className="hidden sm:inline">
                     {sharePending ? messages.generatingShareImage : messages.shareToApps}
                   </span>
@@ -4730,7 +4733,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       )}
 
       {shareDialogOpen && (
-        <div className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-2 backdrop-blur-sm sm:p-3">
+        <div
+          className="absolute inset-0 z-[10020] flex items-center justify-center bg-black/72 p-2 backdrop-blur-sm sm:p-3"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closeSharePreview();
+            }
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
@@ -4750,52 +4760,39 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 first?.focus();
               }
             }}
-            className="flex max-h-[min(96vh,100%)] w-full max-w-[min(96vw,90rem)] flex-col border border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+            className="flex max-h-[min(96dvh,100%)] max-w-full flex-col border border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+            // Size the dialog to the image instead of the viewport, so there is no dead space beside it.
+            style={{
+              width: `max(min(96vw, 90rem, calc((96dvh - 11rem) * ${shareAspectRatio} + 2rem)), min(96vw, 26rem))`,
+            }}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-              <div>
-                <h3 id="share-preview-title" className="text-base font-semibold">{messages.sharePreviewTitle}</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-                  {messages.shareBackground}
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    checked={shareBackgroundEnabled}
-                    onChange={(event) => setShareBackgroundEnabled(event.target.checked)}
-                    className="peer sr-only"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="relative h-5 w-9 shrink-0 rounded-full bg-muted-foreground/35 transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card"
-                  />
-                </label>
-                <button
-                  ref={shareCloseButtonRef}
-                  type="button"
-                  onClick={closeSharePreview}
-                  className="inline-flex size-9 items-center justify-center border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label={messages.closePreview}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+            <div className="flex items-center justify-between gap-3 border-b border-border py-2 pl-4 pr-2">
+              <h3 id="share-preview-title" className="text-base font-semibold">{messages.sharePreviewTitle}</h3>
+              <button
+                ref={shareCloseButtonRef}
+                type="button"
+                onClick={closeSharePreview}
+                className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={messages.closePreview}
+                title={messages.closePreview}
+              >
+                <X className="size-4" />
+              </button>
             </div>
 
             <div
               aria-busy={sharePending}
-              className={cn("flex h-[calc(96vh-9.5rem)] max-h-[60rem] min-h-0 items-center justify-center overflow-hidden p-3 sm:p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}
+              className={cn("flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-4", isLightMode ? "bg-muted/45" : "bg-[#0f1319]")}
             >
               {sharePreview ? <img
                 src={sharePreview.url}
                 alt={messages.sharePreviewTitle}
                 className={cn(
-                  "mx-auto h-auto max-h-full w-auto max-w-full object-contain border shadow-[0_18px_60px_rgba(0,0,0,0.32)]",
+                  "mx-auto h-auto max-h-[calc(96dvh-11rem)] w-auto max-w-full object-contain border shadow-[0_18px_60px_rgba(0,0,0,0.32)]",
                   isLightMode ? "border-border bg-background" : "border-slate-700/80 bg-[#10141b]"
                 )}
               /> : shareError ? (
-                <div role="alert" className="flex flex-col items-center gap-4 px-4 text-center">
+                <div role="alert" className="flex flex-col items-center gap-4 px-4 py-16 text-center">
                   <p className="text-sm text-muted-foreground">{messages.shareFailed}</p>
                   <Button variant="outline" onClick={() => void createSharePreview()}>
                     <RotateCcw className="mr-2 size-4" />
@@ -4803,7 +4800,7 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                   </Button>
                 </div>
               ) : (
-                <div className="relative h-full max-w-full overflow-hidden border border-border/70 bg-background/40 p-3 sm:p-4" style={{ aspectRatio: shareAspectRatio }}>
+                <div className="relative max-h-[calc(96dvh-11rem)] w-full overflow-hidden border border-border/70 bg-background/40 p-3 sm:p-4" style={{ aspectRatio: shareAspectRatio }}>
                   <div aria-hidden="true" className="flex h-full flex-col gap-3 opacity-60 motion-safe:animate-pulse">
                     <div className="h-3 w-28 shrink-0 rounded-sm bg-muted-foreground/20" />
                     <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-3 gap-2">
@@ -4825,7 +4822,21 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+            <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-3 border-t border-border px-4 py-3">
+              <label className="mr-auto flex cursor-pointer items-center gap-2 text-sm text-muted-foreground max-sm:basis-full">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={shareBackgroundEnabled}
+                  onChange={(event) => setShareBackgroundEnabled(event.target.checked)}
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className="relative h-5 w-9 shrink-0 rounded-full bg-muted-foreground/35 transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card"
+                />
+                {messages.shareBackground}
+              </label>
               <Button
                 variant="outline"
                 className="rounded-none border-border bg-background/80 text-foreground hover:bg-muted"
@@ -4836,8 +4847,12 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
                 {messages.downloadImage}
               </Button>
               <Button
-                variant="outline"
-                className="rounded-none border-border bg-background/80 text-foreground hover:bg-muted"
+                variant={canShareSystem ? "outline" : "default"}
+                className={
+                  canShareSystem
+                    ? "rounded-none border-border bg-background/80 text-foreground hover:bg-muted"
+                    : "rounded-none border-transparent bg-brand text-brand-foreground shadow-[0_2px_10px_color-mix(in_srgb,var(--brand)_38%,transparent)] hover:bg-brand/90"
+                }
                 onClick={copySharePreview}
                 disabled={!sharePreview || sharePending}
               >

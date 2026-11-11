@@ -17,7 +17,8 @@ export const changeRangeFilterStorageKey = "heatmap-change-range-filter";
 export const filterOpenModeStorageKey = "heatmap-filter-open-mode";
 export const thumbnailModeStorageKey = "heatmap-thumbnail-mode";
 export const headerTrendStatsStorageKey = "heatmap-header-trend-stats";
-export const heatmapBordersStorageKey = "heatmap-borders";
+// v2: borderless became the default; the v1 key held an auto-saved "on" for every visitor.
+export const heatmapBordersStorageKey = "heatmap-borders-v2";
 export const heatmapBordersQueryKey = "borders";
 export const heatmapMarketQueryKey = "market";
 export const heatmapPeriodQueryKey = "period";
@@ -90,10 +91,10 @@ export const heatmapCanvasThemes: Record<
     backgroundEnd: "#10141b",
     boardFill: "#20252d",
     subBoardFill: "rgba(18, 23, 31, 0.62)",
-    subBoardBorder: "rgba(148, 163, 184, 0.3)",
+    subBoardBorder: "rgba(148, 163, 184, 0.14)",
     activeSubBoardStroke: "#5eead4",
     activeSubBoardInner: "rgba(8, 47, 73, 0.92)",
-    boardBorder: "rgba(148, 163, 184, 0.48)",
+    boardBorder: "rgba(148, 163, 184, 0.24)",
     activeBoardStroke: "#f6d36d",
     highlightOuter: "rgba(2, 6, 23, 0.92)",
     highlightInner: "#f8fafc",
@@ -104,10 +105,10 @@ export const heatmapCanvasThemes: Record<
     backgroundEnd: "#e8eef6",
     boardFill: "#d8e0eb",
     subBoardFill: "rgba(255, 255, 255, 0.82)",
-    subBoardBorder: "rgba(100, 116, 139, 0.26)",
+    subBoardBorder: "rgba(100, 116, 139, 0.14)",
     activeSubBoardStroke: "#0f766e",
     activeSubBoardInner: "rgba(15, 118, 110, 0.28)",
-    boardBorder: "rgba(71, 85, 105, 0.34)",
+    boardBorder: "rgba(71, 85, 105, 0.2)",
     activeBoardStroke: "#b45309",
     highlightOuter: "rgba(15, 23, 42, 0.42)",
     highlightInner: "#ffffff",
