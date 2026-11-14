@@ -144,7 +144,11 @@ export default function GuidePage() {
                 <Link href="/market" className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand">
                   市场热力图大全
                 </Link>
-                进入。
+                进入。想聚焦单个行业，也可以直接打开
+                <Link href="/sector" className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand">
+                  行业板块热力图大全
+                </Link>
+                里的板块页。
               </p>
             </GuideSection>
 

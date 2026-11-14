@@ -22,6 +22,7 @@ export const heatmapBordersStorageKey = "heatmap-borders-v2";
 export const heatmapBordersQueryKey = "borders";
 export const heatmapMarketQueryKey = "market";
 export const heatmapPeriodQueryKey = "period";
+export const heatmapSectorQueryKey = "sector";
 export const refreshIntervalStorageKey = "heatmap-refresh-interval";
 export const defaultRefreshIntervalSeconds = 8;
 export const minRefreshIntervalSeconds = 3;

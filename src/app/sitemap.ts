@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getPosts } from "@/lib/blog";
+import { boardScopes } from "@/data/boards";
 import { marketScopes } from "@/data/markets";
 import { siteConfig } from "@/lib/site";
 
@@ -15,6 +16,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...marketScopes.map(
       (scope): MetadataRoute.Sitemap[number] => ({
         url: `${siteConfig.url}/market/${scope.slug}`,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }),
+    ),
+    { url: `${siteConfig.url}/sector`, changeFrequency: "weekly", priority: 0.8 },
+    ...boardScopes.map(
+      (board): MetadataRoute.Sitemap[number] => ({
+        url: `${siteConfig.url}/sector/${board.slug}`,
         changeFrequency: "weekly",
         priority: 0.7,
       }),

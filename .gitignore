@@ -8,3 +8,4 @@ build
 *.log
 tsconfig.tsbuildinfo
 .DS_Store
+.zcode/

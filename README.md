@@ -60,7 +60,14 @@ pnpm dev
 - `?borders=off`：隐藏实线边框，仅保留一级板块间隙。
 - `?borders=on`：显示完整边框。
 
-URL 参数优先于浏览器中保存的显示偏好，移除参数后会恢复本地设置。同时支持 `true` / `false` 和 `1` / `0`。
+还可以通过 `?sector=<slug>` 让热力图初始聚焦某个一级行业板块（配合 `/sector` 落地页），例如：
+
+- `/?sector=bank`：只看银行板块。
+- `/?sector=electronics&period=month`：近 20 日电子板块。
+
+支持 `bank`、`electronics`、`pharma`、`food-beverage`、`power-equipment`、`computer`、`auto`、`non-bank-financial` 八个板块，完整清单见 [行业板块热力图大全](https://dapan.app/sector)。
+
+URL 参数优先于浏览器中保存的显示偏好，移除参数后会恢复本地设置。`borders` 同时支持 `true` / `false` 和 `1` / `0`。
 
 ### WebMCP 实验支持
 

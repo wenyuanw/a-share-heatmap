@@ -105,7 +105,7 @@ export default async function MarketScopePage({ params }: MarketScopePageProps) 
           <div className="relative">
             <div
               aria-hidden
-              className="absolute -inset-x-8 -top-8 bottom-8 rounded-[2rem] bg-gradient-to-b from-brand/12 to-transparent blur-2xl"
+              className="absolute -inset-x-4 -top-8 bottom-8 rounded-[2rem] bg-gradient-to-b from-brand/12 to-transparent blur-2xl sm:-inset-x-8"
             />
             <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_32px_80px_-32px_color-mix(in_srgb,black_55%,transparent)]">
               <LiveEmbedFrame

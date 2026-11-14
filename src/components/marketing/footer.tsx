@@ -3,6 +3,7 @@ import { ArrowUpRight, Mail } from "lucide-react";
 
 import { GitHubMark } from "@/components/heatmap/github-mark";
 import { SiteMark } from "@/components/marketing/site-mark";
+import { boardScopes } from "@/data/boards";
 import { marketScopes } from "@/data/markets";
 import { marketingNav, siteConfig } from "@/lib/site";
 
@@ -31,7 +32,7 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-border/60 bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div>
             <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
               <SiteMark className="shrink-0" size={26} />
@@ -103,6 +104,30 @@ export function MarketingFooter() {
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   全部市场范围
+                </Link>
+              </li>
+            </ul>
+          </nav>
+
+          <nav aria-label="行业板块热力图">
+            <h3 className="text-sm font-semibold">行业板块</h3>
+            <ul className="mt-3 space-y-2.5 text-sm">
+              {boardScopes.slice(0, 4).map((board) => (
+                <li key={board.slug}>
+                  <Link
+                    href={`/sector/${board.slug}`}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {board.name}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/sector"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  全部行业板块
                 </Link>
               </li>
             </ul>

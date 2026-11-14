@@ -75,6 +75,11 @@ export default function EmbedPage() {
                   <td>涨跌周期：当日、近 5 日、近 20 日、今年以来</td>
                 </tr>
                 <tr>
+                  <td><code>sector</code></td>
+                  <td>bank / electronics / pharma / food-beverage 等</td>
+                  <td>聚焦一级行业板块，例如 <code>?sector=bank</code> 只看银行板块，全部取值见<code>/sector</code></td>
+                </tr>
+                <tr>
                   <td><code>borders</code></td>
                   <td>on / off</td>
                   <td>边框开关，嵌入场景建议 <code>?borders=off</code>，色块更干净</td>

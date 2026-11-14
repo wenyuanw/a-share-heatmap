@@ -118,6 +118,7 @@ import {
   heatmapBordersStorageKey,
   heatmapMarketQueryKey,
   heatmapPeriodQueryKey,
+  heatmapSectorQueryKey,
   heatmapCanvasThemes,
   legendTicks,
   marketOptions,
@@ -132,6 +133,7 @@ import {
   thumbnailModeStorageKey,
   trendFilterStorageKey,
 } from "@/components/heatmap/constants";
+import { getBoardNameBySlug } from "@/data/boards";
 import {
   compareInspectorStocks,
   cycleInspectorSortKey,
@@ -446,9 +448,10 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
     return () => window.removeEventListener("popstate", syncFromUrl);
   }, []);
 
-  // Deep-link values from ?market= / ?period=; cleared once the user picks another value.
+  // Deep-link values from ?market= / ?period= / ?sector=; cleared once the user picks another value.
   const urlMarketRef = useRef<string | null>(null);
   const urlPeriodRef = useRef<string | null>(null);
+  const urlSectorRef = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -553,6 +556,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       if (queryPeriod && isHeatmapPeriodKey(queryPeriod)) {
         urlPeriodRef.current = queryPeriod;
         setPeriod(queryPeriod);
+      }
+      const querySector = queryParams.get(heatmapSectorQueryKey);
+      if (querySector) {
+        const sectorName = getBoardNameBySlug(querySector);
+        if (sectorName) {
+          urlSectorRef.current = sectorName;
+          setBoardFilter([sectorName]);
+        }
       }
       setPreferencesReady(true);
     }
@@ -731,6 +742,14 @@ export function MarketHeatmap({ locale: initialLocale }: { locale: Locale }) {
       window.sessionStorage.setItem(boardFilterStorageKey, JSON.stringify(boardFilter));
     } catch {
       /* Preferences are optional. */
+    }
+    if (urlSectorRef.current && JSON.stringify(boardFilter) !== JSON.stringify([urlSectorRef.current])) {
+      urlSectorRef.current = null;
+      const url = new URL(window.location.href);
+      if (url.searchParams.has(heatmapSectorQueryKey)) {
+        url.searchParams.delete(heatmapSectorQueryKey);
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
     }
   }, [boardFilter, preferencesReady]);
 
