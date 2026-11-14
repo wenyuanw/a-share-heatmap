@@ -83,6 +83,14 @@
     @apply bg-background text-foreground;
   }
 
+  /* Smooth anchor jumps (TOC, in-page links). */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 20%, transparent);
+  }
 }
 
 /* The heatmap page locks scrolling; content pages scroll normally. */
@@ -157,6 +165,56 @@ html.heatmap-page-active body {
   animation: marketing-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Route view transitions: the old page leaves fast, the new one arrives gently. */
+::view-transition-old(.page-exit) {
+  animation: vt-page-out 140ms ease-in both;
+}
+::view-transition-new(.page-enter) {
+  animation: vt-page-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes vt-page-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Let clicks pass through the transition overlay to the live page. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Entrance fallback for runtimes without working view transitions: plays on
+   mount whenever the page shell remounts (navigation, slug change). */
+.page-enter-fallback {
+  animation: vt-page-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Gentle breathing on hero badge dots keeps page tops feeling alive. */
+.hero-dot {
+  animation: hero-dot-pulse 2.6s ease-in-out infinite;
+}
+@keyframes hero-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 /* Subtle dotted grid backdrop, fading out towards the bottom. */
 .marketing-grid-bg {
   background-image: radial-gradient(
@@ -196,20 +254,50 @@ html.heatmap-page-active body {
   box-shadow: 0 12px 32px -16px color-mix(in srgb, black 35%, transparent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .reveal,
-  .marketing-card {
-    transition: none;
+/* Opacity-only entrance shared by the reduced-motion variants below.
+   Motion sensitivity is triggered by positional movement and looping
+   effects — gentle fades stay acceptable and keep pages feeling alive. */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
   }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .reveal {
     opacity: 1;
     transform: none;
   }
-  .marketing-fade-up {
-    animation: none;
-  }
   .marketing-card:hover {
     transform: none;
+  }
+  .marketing-fade-up {
+    animation: vt-fade-in 0.5s ease both;
+  }
+  .page-enter-fallback {
+    animation: vt-fade-in 0.3s ease both;
+  }
+  /* Decorative loops keep still under reduced motion. */
+  .hero-dot,
+  .heart-beat {
+    animation: none;
+  }
+  /* View transitions: no positional movement or size morphing; the page
+     pair keeps a quick opacity crossfade, everything else snaps. */
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  ::view-transition-old(.page-exit) {
+    animation: vt-fade-in 140ms ease both;
+  }
+  ::view-transition-new(.page-enter) {
+    animation: vt-fade-in 200ms ease both;
   }
 }
 
@@ -337,8 +425,10 @@ html.heatmap-page-active body {
 }
 .mdx-content blockquote {
   margin: 1.5em 0;
-  padding: 0.2em 1.2em;
-  border-left: 2px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  padding: 0.6em 1.2em;
+  border-left: 2px solid var(--brand);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
   color: var(--muted-foreground);
 }
 .mdx-content code {
@@ -364,6 +454,15 @@ html.heatmap-page-active body {
   padding: 0;
   font-size: 0.8125rem;
 }
+
+/* CodeBlock component: the framed figure provides chrome, the pre stays flush. */
+.mdx-content .code-block pre {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
 .mdx-content img {
   max-width: 100%;
   height: auto;
@@ -375,19 +474,32 @@ html.heatmap-page-active body {
   border: 0;
   border-top: 1px solid var(--border);
 }
+/* Tables render as rounded cards; .table-wrap keeps wide tables scrollable
+   on small screens instead of overflowing the article column. */
+.mdx-content .table-wrap {
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
 .mdx-content table {
   width: 100%;
-  margin: 1.5em 0;
+  margin: 0;
   border-collapse: collapse;
   font-size: 0.9375rem;
 }
 .mdx-content th,
 .mdx-content td {
-  border: 1px solid var(--border);
-  padding: 0.5em 0.9em;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.55em 0.9em;
   text-align: left;
 }
-.mdx-content th {
+.mdx-content thead th {
+  border-top: 0;
   background: var(--muted);
   font-weight: 600;
+}
+.mdx-content tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
 }

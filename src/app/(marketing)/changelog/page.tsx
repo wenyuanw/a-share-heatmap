@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { PageHeader } from "@/components/marketing/page-header";
+import { PageHero } from "@/components/marketing/page-hero";
+import { PageTransition } from "@/components/marketing/page-transition";
 import { Reveal } from "@/components/marketing/reveal";
 import { changelog, changelogTagMeta, type ChangelogTag } from "@/data/changelog";
 import { siteConfig } from "@/lib/site";
@@ -41,14 +42,16 @@ function formatDate(date: string) {
 
 export default function ChangelogPage() {
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
-      <PageHeader
+    <PageTransition>
+      <PageHero
         eyebrow="CHANGELOG"
         title="更新日志"
         description="每一次迭代都会记录在这里：新功能、体验优化与问题修复，按时间倒序排列。"
+        size="md"
       />
 
-      <ol className="mt-14 space-y-12">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6 sm:pb-20">
+        <ol className="space-y-12">
         {changelog.map((entry, index) => (
           <li
             key={`${entry.date}-${entry.title}`}
@@ -57,7 +60,7 @@ export default function ChangelogPage() {
             <Reveal>
               <time
                 dateTime={entry.date}
-                className="block pt-0.5 text-sm font-medium text-muted-foreground sm:sticky sm:top-20"
+                className="block pt-0.5 text-sm font-medium text-muted-foreground tabular-nums sm:sticky sm:top-20"
               >
                 {formatDate(entry.date)}
               </time>
@@ -96,30 +99,31 @@ export default function ChangelogPage() {
             </Reveal>
           </li>
         ))}
-      </ol>
+        </ol>
 
-      <Reveal className="mt-16">
-        <div className="rounded-xl border border-border/70 bg-card/60 px-5 py-4 text-sm text-muted-foreground">
-          更早的迭代记录可以在
-          <a
-            href={`${siteConfig.repoUrl}/commits/main`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
-          >
-            GitHub 提交历史
-          </a>
-          中查看。想了解某个功能的用法？欢迎阅读
-          <Link
-            href="/whats-new"
-            className="mx-1 inline-flex items-center gap-0.5 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
-          >
-            博客
-            <ArrowRight className="size-3.5" aria-hidden />
-          </Link>
-          。
-        </div>
-      </Reveal>
-    </div>
+        <Reveal className="mt-16">
+          <div className="rounded-xl border border-border/70 bg-card/60 px-5 py-4 text-sm text-muted-foreground">
+            更早的迭代记录可以在
+            <a
+              href={`${siteConfig.repoUrl}/commits/main`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
+            >
+              GitHub 提交历史
+            </a>
+            中查看。想了解某个功能的用法？欢迎阅读
+            <Link
+              href="/whats-new"
+              className="mx-1 inline-flex items-center gap-0.5 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
+            >
+              博客
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+            。
+          </div>
+        </Reveal>
+      </div>
+    </PageTransition>
   );
 }

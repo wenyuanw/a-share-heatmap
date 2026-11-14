@@ -53,27 +53,38 @@ export function FeatureCarousel({ children, duplicate }: { children: ReactNode; 
 
   return (
     <div className="mt-8">
-      <div
-        ref={viewportRef}
-        role="region"
-        aria-label="功能卡片，可横向滚动查看"
-        tabIndex={0}
-        onPointerEnter={(event) => { if (event.pointerType === "mouse") interaction.current.hover = true; }}
-        onPointerLeave={() => { interaction.current.hover = false; releasePointer(); }}
-        onPointerDown={() => { interaction.current.dragging = true; }}
-        onPointerUp={releasePointer}
-        onPointerCancel={releasePointer}
-        onWheel={() => { interaction.current.resumeAt = performance.now() + 2500; }}
-        onFocusCapture={() => { interaction.current.focus = true; }}
-        onBlurCapture={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) interaction.current.focus = false;
-        }}
-        className="overflow-x-auto overscroll-x-contain rounded-xl py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-      >
-        <div className="flex w-max items-stretch">
-          <ul ref={groupRef} className="flex shrink-0 items-stretch gap-4 pr-4">{children}</ul>
-          <ul aria-hidden="true" className="flex shrink-0 items-stretch gap-4 pr-4 motion-reduce:hidden">{duplicate}</ul>
+      <div className="relative">
+        <div
+          ref={viewportRef}
+          role="region"
+          aria-label="功能卡片，可横向滚动查看"
+          tabIndex={0}
+          onPointerEnter={(event) => { if (event.pointerType === "mouse") interaction.current.hover = true; }}
+          onPointerLeave={() => { interaction.current.hover = false; releasePointer(); }}
+          onPointerDown={() => { interaction.current.dragging = true; }}
+          onPointerUp={releasePointer}
+          onPointerCancel={releasePointer}
+          onWheel={() => { interaction.current.resumeAt = performance.now() + 2500; }}
+          onFocusCapture={() => { interaction.current.focus = true; }}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) interaction.current.focus = false;
+          }}
+          className="overflow-x-auto overscroll-x-contain rounded-xl py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+        >
+          <div className="flex w-max items-stretch">
+            <ul ref={groupRef} className="flex shrink-0 items-stretch gap-4 pr-4">{children}</ul>
+            <ul aria-hidden="true" className="flex shrink-0 items-stretch gap-4 pr-4 motion-reduce:hidden">{duplicate}</ul>
+          </div>
         </div>
+        {/* Edge fades hint that the strip keeps scrolling. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 w-6 rounded-l-xl bg-gradient-to-r from-background to-transparent motion-reduce:hidden"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-xl bg-gradient-to-l from-background to-transparent motion-reduce:hidden"
+        />
       </div>
       <div className="mt-3 flex justify-end motion-reduce:hidden">
         <button

@@ -5,7 +5,9 @@ import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 
 import { ButtonLink } from "@/components/marketing/button-link";
 import { JsonLd } from "@/components/marketing/json-ld";
-import { PageHeader } from "@/components/marketing/page-header";
+import { LiveEmbedFrame } from "@/components/marketing/live-embed-frame";
+import { PageHero } from "@/components/marketing/page-hero";
+import { PageTransition } from "@/components/marketing/page-transition";
 import { Reveal } from "@/components/marketing/reveal";
 import { getMarketScope, marketScopes } from "@/data/markets";
 import { siteConfig } from "@/lib/site";
@@ -73,37 +75,43 @@ export default async function MarketScopePage({ params }: MarketScopePageProps) 
   ];
 
   return (
-    <>
+    <PageTransition transitionKey={info.slug}>
       <JsonLd data={jsonLd} />
-      <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <nav aria-label="面包屑" className="marketing-fade-up mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/market" className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
-            <ArrowLeft className="size-4" aria-hidden />
+      <PageHero
+        eyebrow={info.tagline}
+        title={`${info.name}热力图`}
+        description={info.description}
+        size="lg"
+      >
+        <nav
+          aria-label="面包屑"
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <Link
+            href="/market"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-3 py-1 transition-colors hover:border-border hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden />
             市场热力图
           </Link>
-          <span aria-hidden>/</span>
+          <span aria-hidden className="text-border">/</span>
           <span className="text-foreground">{info.name}</span>
         </nav>
+      </PageHero>
 
-        <PageHeader
-          eyebrow={info.tagline}
-          title={`${info.name}热力图`}
-          description={info.description}
-        />
-
+      <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
         {/* Live embed */}
-        <Reveal className="mt-10">
+        <Reveal className="mt-2">
           <div className="relative">
             <div
               aria-hidden
               className="absolute -inset-x-8 -top-8 bottom-8 rounded-[2rem] bg-gradient-to-b from-brand/12 to-transparent blur-2xl"
             />
             <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_32px_80px_-32px_color-mix(in_srgb,black_55%,transparent)]">
-              <iframe
+              <LiveEmbedFrame
                 src={embedSrc}
                 title={`${info.name}热力图实时预览`}
-                loading="lazy"
-                className="block h-[480px] w-full sm:h-[560px] md:h-[640px]"
+                className="h-[480px] sm:h-[560px] md:h-[640px]"
               />
             </div>
           </div>
@@ -129,7 +137,7 @@ export default async function MarketScopePage({ params }: MarketScopePageProps) 
             {info.highlights.map((highlight, index) => (
               <Reveal key={highlight} delay={index * 70} className="h-full">
                 <li className="marketing-card h-full rounded-xl border border-border/70 bg-card/60 p-5 text-sm leading-relaxed text-muted-foreground">
-                  <span className="mb-3 flex size-7 items-center justify-center rounded-lg border border-border/60 bg-muted/50 font-mono text-xs text-foreground">
+                  <span className="mb-3 flex size-7 items-center justify-center rounded-lg border border-brand/25 bg-brand/10 font-mono text-xs font-semibold text-brand">
                     {index + 1}
                   </span>
                   {highlight}
@@ -175,6 +183,6 @@ export default async function MarketScopePage({ params }: MarketScopePageProps) 
           </Reveal>
         </section>
       </div>
-    </>
+    </PageTransition>
   );
 }

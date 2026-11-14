@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PageHeader } from "@/components/marketing/page-header";
+import { ButtonLink } from "@/components/marketing/button-link";
+import { PageHero } from "@/components/marketing/page-hero";
+import { PageTransition } from "@/components/marketing/page-transition";
 import { Reveal } from "@/components/marketing/reveal";
 import { siteConfig } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: `使用教程：热力图怎么看 | ${siteConfig.name}`,
@@ -33,41 +36,82 @@ const toc = [
   { id: "faq", label: "常见问题" },
 ];
 
+/** Section wrapper: hairline break + anchor offset, chapters 2+ get the rule. */
+function GuideSection({
+  id,
+  index,
+  title,
+  children,
+}: {
+  id: string;
+  index: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className={cn("scroll-mt-24", index > 0 && "mt-12 border-t border-border/50 pt-10")}
+    >
+      <Reveal>
+        <h2 className="group flex items-baseline gap-3 text-2xl font-semibold tracking-tight">
+          <span
+            aria-hidden
+            className="font-mono text-sm font-medium text-brand/70 tabular-nums transition-colors group-hover:text-brand"
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          {title}
+        </h2>
+        <div className="mdx-content mt-4">{children}</div>
+      </Reveal>
+    </section>
+  );
+}
+
 export default function GuidePage() {
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-      <PageHeader
+    <PageTransition>
+      <PageHero
         eyebrow="GUIDE"
         title="使用教程：热力图怎么看"
         description="从打开页面到熟练复盘，这篇教程覆盖热力图的全部功能。大部分操作一试就会，建议边读边在热力图里操作。"
+        size="lg"
       />
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[210px_1fr]">
-        {/* TOC */}
-        <aside className="hidden lg:block">
-          <nav aria-label="目录" className="sticky top-20">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              目录
-            </p>
-            <ul className="mt-3 space-y-1.5 border-l border-border/60 text-sm">
-              {toc.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    className="block border-l-2 border-transparent py-1 pl-3 text-muted-foreground transition-colors [scroll-margin-top:5rem] hover:border-brand hover:text-foreground"
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </aside>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
+        <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
+          {/* TOC */}
+          <aside className="hidden lg:block">
+            <nav aria-label="目录" className="sticky top-20">
+              <div className="rounded-xl border border-border/70 bg-card/60 p-4">
+                <p className="px-2.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  目录
+                </p>
+                <ul className="mt-2.5 space-y-0.5 text-sm">
+                  {toc.map((item, index) => (
+                    <li key={item.id}>
+                      <a
+                        href={`#${item.id}`}
+                        className="group flex items-baseline gap-2.5 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                      >
+                        <span
+                          aria-hidden
+                          className="font-mono text-[11px] text-muted-foreground/60 tabular-nums transition-colors group-hover:text-brand"
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </nav>
+          </aside>
 
-        <article className="max-w-3xl">
-          <section id="reading" className="marketing-fade-up scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">怎么读图</h2>
-            <div className="mdx-content mt-4">
+          <article className="min-w-0 max-w-3xl">
+            <GuideSection id="reading" index={0} title="怎么读图">
               <p>
                 热力图把整个市场压缩成一屏，三个维度就够了：
               </p>
@@ -88,12 +132,9 @@ export default function GuidePage() {
               <p>
                 鼠标悬浮查看个股详情，滚轮缩放、拖拽平移；双击板块标题可以聚焦该板块，再点面包屑返回全市场。
               </p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="markets" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">市场范围</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="markets" index={1} title="市场范围">
               <p>
                 左侧边栏可以随时切换市场范围：A 股全图、上证 A 股、深证 A 股、沪深 300、中证 A50、中证
                 A500、A 股主板、创业板、科创板，以及你的自选列表。
@@ -105,12 +146,9 @@ export default function GuidePage() {
                 </Link>
                 进入。
               </p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="periods" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">涨跌周期</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="periods" index={2} title="涨跌周期">
               <p>
                 底部或侧栏可切换涨跌区间：<strong>当日</strong>
                 看情绪，<strong>近 5 日</strong>、<strong>近 20 日</strong>
@@ -118,12 +156,9 @@ export default function GuidePage() {
                 看全年结构。同一个市场换一个周期，经常能看到完全不同的故事——今天跌的板块，放到近 20
                 日里可能一直在走强。
               </p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="filters" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">筛选与聚焦</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="filters" index={3} title="筛选与聚焦">
               <ul>
                 <li>
                   <strong>一级板块筛选</strong>
@@ -138,12 +173,9 @@ export default function GuidePage() {
                   ：比如 5%~10%，把平淡的股票过滤掉，只留下真正在动的标的。
                 </li>
               </ul>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="watchlist" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">自选热力图</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="watchlist" index={4} title="自选热力图">
               <ul>
                 <li>
                   在设置 → 自选中按<strong>名称或代码</strong>添加股票，切到「自选」范围即可查看个人热力图。
@@ -158,12 +190,9 @@ export default function GuidePage() {
                 </li>
                 <li>自选数据只保存在本地浏览器，不上传服务器。更多玩法见博客文章。</li>
               </ul>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="appearance" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">外观与快捷键</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="appearance" index={5} title="外观与快捷键">
               <ul>
                 <li>
                   <strong>配色主题</strong>
@@ -178,57 +207,50 @@ export default function GuidePage() {
                   ：关掉实线边框，色块更干净；深浅模式底栏一键切换。
                 </li>
               </ul>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="params" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">URL 参数</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="params" index={6} title="URL 参数">
               <p>
                 用 URL 参数可以直接打开指定状态，适合加入书签或分享给朋友。参数优先于本地保存的偏好：
               </p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>参数</th>
-                    <th>取值</th>
-                    <th>示例</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><code>market</code></td>
-                    <td>all / sse / szse / hs300 / zza50 / zza500 / main / cyb / kcb / watchlist</td>
-                    <td><code>/?market=hs300</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>period</code></td>
-                    <td>day / week / month / year</td>
-                    <td><code>/?market=cyb&period=month</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>borders</code></td>
-                    <td>on / off</td>
-                    <td><code>/?borders=off</code></td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>参数</th>
+                      <th>取值</th>
+                      <th>示例</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>market</code></td>
+                      <td>all / sse / szse / hs300 / zza50 / zza500 / main / cyb / kcb / watchlist</td>
+                      <td><code>/?market=hs300</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>period</code></td>
+                      <td>day / week / month / year</td>
+                      <td><code>/?market=cyb&period=month</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>borders</code></td>
+                      <td>on / off</td>
+                      <td><code>/?borders=off</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
               <p>在页面内手动切换范围或周期后，对应的 URL 参数会被移除，恢复本地偏好。</p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="share" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">截图分享</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="share" index={7} title="截图分享">
               <p>
                 底栏「分享」一键生成热力图快照，支持下载、复制到剪贴板与系统分享。复盘观点配上这张图，讨论起来直观得多。
               </p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="webmcp" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">WebMCP</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="webmcp" index={8} title="WebMCP">
               <p>
                 热力图内置了一组 WebMCP 工具，浏览器 AI 可以直接读取市场状态、切换视图、查询排行与管理自选股。在
                 ChatGPT 桌面版内置浏览器中打开本站即可体验，详见
@@ -249,12 +271,9 @@ export default function GuidePage() {
                 </a>
                 。
               </p>
-            </div>
-          </section>
+            </GuideSection>
 
-          <section id="faq" className="marketing-fade-up mt-12 scroll-mt-20">
-            <h2 className="text-2xl font-semibold tracking-tight">常见问题</h2>
-            <div className="mdx-content mt-4">
+            <GuideSection id="faq" index={9} title="常见问题">
               <ul>
                 <li>
                   <strong>要付费吗？需要注册吗？</strong>
@@ -280,33 +299,35 @@ export default function GuidePage() {
                   。行情数据仅供研究参考，不构成投资建议。
                 </li>
               </ul>
-            </div>
-          </section>
+            </GuideSection>
 
-          <Reveal className="mt-14">
-            <div className="rounded-xl border border-border/70 bg-card/60 px-5 py-4 text-sm text-muted-foreground">
-              还有疑问？欢迎在
-              <a
-                href={`${siteConfig.repoUrl}/issues`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
-              >
-                GitHub Issues
-              </a>
-              提问，或直接
-              <Link
-                href="/"
-                prefetch={false}
-                className="mx-1 font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand"
-              >
-                打开热力图
-              </Link>
-              试一试。
-            </div>
-          </Reveal>
-        </article>
+            <Reveal className="mt-14">
+              <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/60 px-6 py-8 text-center sm:px-12">
+                <div aria-hidden className="marketing-glow absolute inset-0" />
+                <div className="relative">
+                  <h2 className="text-lg font-semibold tracking-tight">还有疑问？</h2>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                    欢迎在 GitHub Issues 提问，或直接打开热力图试一试——大部分操作一试就会。
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    <ButtonLink
+                      href={`${siteConfig.repoUrl}/issues`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outline"
+                    >
+                      GitHub Issues
+                    </ButtonLink>
+                    <ButtonLink href="/" prefetch={false}>
+                      打开热力图
+                    </ButtonLink>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </article>
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

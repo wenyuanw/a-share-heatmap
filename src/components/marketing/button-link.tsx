@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const variantClasses = {
   primary:
-    "bg-brand text-brand-foreground hover:bg-brand/90 shadow-[0_10px_28px_-14px_color-mix(in_srgb,var(--brand)_65%,transparent)]",
+    "bg-brand text-brand-foreground hover:-translate-y-px hover:bg-brand/90 shadow-[0_10px_28px_-14px_color-mix(in_srgb,var(--brand)_65%,transparent)]",
   outline: "border-border bg-background/60 text-foreground hover:bg-muted hover:border-border",
   ghost: "text-muted-foreground hover:text-foreground hover:bg-muted/60",
 } as const;

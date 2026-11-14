@@ -3,6 +3,7 @@ import { ArrowUpRight, Coffee, Globe, Heart, Mail, Megaphone, Sparkles, Star, ty
 
 import { ButtonLink } from "@/components/marketing/button-link";
 import { JsonLd } from "@/components/marketing/json-ld";
+import { PageTransition } from "@/components/marketing/page-transition";
 import { Reveal } from "@/components/marketing/reveal";
 import { RewardQr } from "@/components/marketing/reward-qr";
 import { SupporterAvatar } from "@/components/marketing/supporter-avatar";
@@ -102,7 +103,7 @@ export default function SponsorsPage() {
   const supporterList: Supporter[] = supporters;
 
   return (
-    <>
+    <PageTransition>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -232,8 +233,8 @@ export default function SponsorsPage() {
         <ul className="mt-6 grid gap-4 sm:grid-cols-3">
           {usageItems.map((item, index) => (
             <Reveal key={item.title} delay={index * 70} className="h-full">
-              <li className="marketing-card h-full rounded-xl border border-border/70 bg-card/60 p-5">
-                <span className="inline-flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/50">
+              <li className="marketing-card group h-full rounded-xl border border-border/70 bg-card/60 p-5">
+                <span className="inline-flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/50 transition-colors duration-300 group-hover:border-brand/30 group-hover:bg-brand/10">
                   <item.icon className="size-4.5 text-brand" aria-hidden />
                 </span>
                 <h3 className="mt-4 text-[15px] font-semibold">{item.title}</h3>
@@ -319,7 +320,7 @@ export default function SponsorsPage() {
           {freeSupportItems.map((item, index) => {
             const card = (
               <>
-                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50 transition-colors duration-300 group-hover:border-brand/30 group-hover:bg-brand/10 group-hover:text-brand">
                   <item.icon className="size-4.5" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -338,7 +339,7 @@ export default function SponsorsPage() {
                   <a
                     href={item.href}
                     {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="marketing-card flex h-full items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 p-4 sm:p-5"
+                    className="marketing-card group flex h-full items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 p-4 sm:p-5"
                   >
                     {card}
                   </a>
@@ -377,6 +378,6 @@ export default function SponsorsPage() {
           </div>
         </Reveal>
       </section>
-    </>
+    </PageTransition>
   );
 }

@@ -23,6 +23,7 @@ import {
 import { ButtonLink } from "@/components/marketing/button-link";
 import { FeatureCarousel } from "@/components/marketing/feature-carousel";
 import { JsonLd } from "@/components/marketing/json-ld";
+import { PageTransition } from "@/components/marketing/page-transition";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { Reveal } from "@/components/marketing/reveal";
 import { GitHubMark } from "@/components/heatmap/github-mark";
@@ -192,10 +193,10 @@ const scenarios: Scenario[] = [
 function FeatureCards({ duplicate = false }: { duplicate?: boolean }) {
   return features.map((feature) => {
     const cardClass =
-      "marketing-card flex h-full min-h-56 flex-col rounded-xl border border-border/70 bg-card/60 p-5";
+      "marketing-card group flex h-full min-h-56 flex-col rounded-xl border border-border/70 bg-card/60 p-5";
     const card = (
       <>
-        <span className="inline-flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-foreground">
+        <span className="inline-flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-foreground transition-colors duration-300 group-hover:border-brand/30 group-hover:bg-brand/10 group-hover:text-brand">
           <feature.icon className="size-4.5" aria-hidden />
         </span>
         <h3 className="mt-4 text-[15px] font-semibold">{feature.title}</h3>
@@ -229,7 +230,7 @@ function FeatureCards({ duplicate = false }: { duplicate?: boolean }) {
 
 export default function FeaturesPage() {
   return (
-    <>
+    <PageTransition>
       <JsonLd data={jsonLd} />
 
       {/* Hero */}
@@ -329,8 +330,8 @@ export default function FeaturesPage() {
           <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {scenarios.map((scenario, index) => (
               <Reveal key={scenario.title} delay={(index % 2) * 70}>
-                <li className="marketing-card flex gap-4 rounded-xl border border-border/70 bg-card/60 p-5">
-                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50">
+                <li className="marketing-card group flex gap-4 rounded-xl border border-border/70 bg-card/60 p-5">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50 transition-colors duration-300 group-hover:border-brand/30 group-hover:bg-brand/10 group-hover:text-brand">
                     <scenario.icon className="size-4.5" aria-hidden />
                   </span>
                   <div>
@@ -373,6 +374,6 @@ export default function FeaturesPage() {
           </div>
         </Reveal>
       </section>
-    </>
+    </PageTransition>
   );
 }
