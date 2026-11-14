@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ComponentProps } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock } from "lucide-react";
@@ -54,6 +55,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 function formatDate(date: string) {
   const [year, month, day] = date.split("-");
   return `${year} 年 ${Number(month)} 月 ${Number(day)} 日`;
+}
+
+/** MDX tables render through .table-wrap for the rounded, scrollable card look. */
+function MdxTable({ children, ...props }: ComponentProps<"table">) {
+  return (
+    <div className="table-wrap">
+      <table {...props}>{children}</table>
+    </div>
+  );
 }
 
 export default async function BlogPostPage({ params }: PostPageProps) {
@@ -130,7 +140,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
           />
 
           <Reveal className="mdx-content text-[15px]">
-            <MdxContent />
+            <MdxContent components={{ table: MdxTable }} />
           </Reveal>
 
           <footer className="mt-14">
