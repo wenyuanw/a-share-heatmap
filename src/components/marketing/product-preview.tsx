@@ -1,19 +1,19 @@
 import Image from "next/image";
-import { Maximize2, Monitor, Smartphone } from "lucide-react";
+import { Monitor, Smartphone } from "lucide-react";
 
-import desktopScreenshot from "../../../public/screenshots/heatmap-desktop.jpg";
-import mobileScreenshot from "../../../public/screenshots/heatmap-mobile.jpg";
+import desktopScreenshot from "../../../public/screenshots/heatmap-desktop.webp";
+import mobileScreenshot from "../../../public/screenshots/heatmap-mobile.webp";
 
 export function ProductPreview() {
   return (
-    <figure className="relative isolate rounded-3xl border border-border/70 bg-card/70 p-4 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.5)] sm:p-6 lg:p-8">
+    <figure id="product-preview" className="relative isolate scroll-mt-20 rounded-3xl border border-border/70 bg-card/70 p-4 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.5)] sm:p-6 lg:p-8">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl">
         <div className="absolute -top-24 left-1/4 h-64 w-96 rounded-full bg-brand/8 blur-3xl" />
         <div className="absolute -bottom-32 right-0 h-64 w-96 rounded-full bg-emerald-500/5 blur-3xl" />
       </div>
 
       <div className="grid items-stretch gap-6 md:grid-cols-[minmax(0,3.2fr)_minmax(0,1fr)] lg:gap-7">
-        <div className="hidden min-w-0 flex-col md:flex">
+        <div className="flex min-w-0 flex-col">
           <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Monitor className="size-3.5" aria-hidden />
             桌面端
@@ -24,24 +24,14 @@ export function ProductPreview() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="查看桌面端高清原图（新标签页）"
-            className="group block overflow-hidden rounded-xl border border-white/15 bg-[#151a21] shadow-xl outline-offset-4 focus-visible:outline-brand"
+            className="block overflow-hidden rounded-xl shadow-xl outline-offset-4 focus-visible:outline-brand"
           >
-            <div className="flex h-9 items-center justify-between border-b border-white/10 px-3 text-[10px] text-slate-400">
-              <span aria-hidden className="flex gap-1.5">
-                <span className="size-1.5 rounded-full bg-white/25" />
-                <span className="size-1.5 rounded-full bg-white/25" />
-                <span className="size-1.5 rounded-full bg-white/25" />
-              </span>
-              <span>dapan.app</span>
-              <Maximize2 className="size-3 transition-colors group-hover:text-white" aria-hidden />
-            </div>
             <Image
               src={desktopScreenshot}
               alt="经典红绿配色的桌面端 A 股全市场热力图，包含市场菜单、行业板块和个股涨跌"
-              unoptimized
+              sizes="(min-width: 1152px) 780px, (min-width: 768px) 73vw, (min-width: 640px) calc(100vw - 6rem), calc(100vw - 4rem)"
               className="block h-auto w-full"
             />
-            <div aria-hidden className="h-4" />
           </a>
         </div>
 
@@ -55,22 +45,14 @@ export function ProductPreview() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="查看手机端高清原图（新标签页）"
-            className="flex flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-white/20 bg-[#151a21] shadow-xl outline-offset-4 focus-visible:outline-brand"
+            className="block overflow-hidden rounded-xl shadow-xl outline-offset-4 focus-visible:outline-brand"
           >
-            <div className="flex h-9 shrink-0 items-center justify-center border-b border-white/10 text-[10px] tracking-wide text-slate-400" aria-hidden>dapan.app</div>
-            <div className="relative aspect-[1/2] md:aspect-auto md:min-h-0 md:flex-1">
-              <Image
-                src={mobileScreenshot}
-                alt="经典红绿配色的手机端 A 股热力图，竖屏展示板块与个股分布"
-                fill
-                sizes="(min-width: 1152px) 240px, (min-width: 768px) 24vw, 280px"
-                unoptimized
-                className="object-contain"
-              />
-            </div>
-            <div aria-hidden className="flex h-4 shrink-0 items-center justify-center">
-              <span className="h-0.5 w-10 rounded-full bg-white/30" />
-            </div>
+            <Image
+              src={mobileScreenshot}
+              alt="经典红绿配色的手机端 A 股热力图，竖屏展示板块与个股分布"
+              sizes="(min-width: 1152px) 240px, (min-width: 768px) 24vw, 280px"
+              className="block h-auto w-full"
+            />
           </a>
         </div>
       </div>
