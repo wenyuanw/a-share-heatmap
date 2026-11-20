@@ -176,7 +176,13 @@ pnpm refresh:data  # 校验通过后更新行情、行业映射和上市状态�
   <img src="./public/sponsor/reward-cover.jpg" alt="赞赏码：请作者喝杯咖啡" width="320" />
 </p>
 
-也可以直接通过 [GitHub Sponsors](https://github.com/sponsors/wenyuanw) 支持。
+不方便扫码的话，也可以通过 [GitHub Sponsors](https://github.com/sponsors/wenyuanw) 或 Buy Me a Coffee 支持：
+
+<p align="center">
+  <a href="https://buymeacoffee.com/wenyuan">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-支持作者-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" />
+  </a>
+</p>
 
 感谢每一位支持项目的朋友，你们的鼓励让我更有动力持续维护和改进。
 
